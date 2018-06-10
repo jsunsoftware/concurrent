@@ -1,4 +1,4 @@
-package com.jsunsoft.util.concurrent;
+package com.jsunsoft.util.concurrent.locks;
 
 /*
  * Copyright 2017 Benik Arakelyan

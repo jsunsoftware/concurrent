@@ -1,4 +1,4 @@
-package com.jsunsoft.util.concurrent;
+package com.jsunsoft.util.concurrent.locks;
 
 /*
  * Copyright 2017 Benik Arakelyan
@@ -16,19 +16,10 @@ package com.jsunsoft.util.concurrent;
  * limitations under the License.
  */
 
-import com.jsunsoft.util.Executable;
+@SuppressWarnings("serial")
+public class LockAcquireException extends RuntimeException {
 
-import java.util.Collection;
-
-public interface Lock {
-
-    <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X;
-
-    <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X;
-
-    <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X;
-
-    <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X;
-
-
+    LockAcquireException(String message) {
+        super(message);
+    }
 }
