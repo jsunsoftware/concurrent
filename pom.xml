@@ -6,7 +6,7 @@
 
     <groupId>com.jsunsoft.util</groupId>
     <artifactId>concurrent</artifactId>
-    <version>0.0.1-alpha0</version>
+    <version>0.0.1-alpha1</version>
     <packaging>jar</packaging>
 
     <name>concurrent</name>
@@ -152,11 +152,18 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-        <!--<dependency>-->
-        <!--<groupId>org.slf4j</groupId>-->
-        <!--<artifactId>slf4j-simple</artifactId>-->
-        <!--<version>${slf4j.version}</version>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <scm>

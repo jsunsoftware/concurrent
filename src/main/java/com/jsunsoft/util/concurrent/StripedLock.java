@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
-public class StripedLock implements Lock {
+public final class StripedLock implements Lock {
     private static final Logger LOGGER = LoggerFactory.getLogger(StripedLock.class);
 
     private final int lockTimeSec;
@@ -42,13 +42,32 @@ public class StripedLock implements Lock {
     }
 
     @Override
-    public <X extends Throwable> void lock(Object resource, Executable<X> executable) throws InterruptedException, X {
+    public <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X {
         requireNonNull(resource, "parameter 'resources' must not be null");
         lock(Collections.singleton(resource), executable);
     }
 
     @Override
-    public <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws InterruptedException, X {
+    public <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X {
+        requireNonNull(resources, "parameter 'resources' must not be null");
+        requireNonNull(executable, "parameter 'executable' must not be null");
+
+        try {
+            lockInterruptibly(resources, executable);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
+        }
+    }
+
+    @Override
+    public <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X {
+        requireNonNull(resource, "parameter 'resources' must not be null");
+        lockInterruptibly(Collections.singleton(resource), executable);
+    }
+
+    @Override
+    public <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X {
         requireNonNull(resources, "parameter 'resources' must not be null");
         requireNonNull(executable, "parameter 'executable' must not be null");
 
