@@ -17,17 +17,19 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public class StripedLockFactory {
+
     private StripedLockFactory() {
     }
 
     /**
      * Creates and return Lock  according to type
      *
-     * @param type
-     * @param stripes     Minimum number of stripes
-     * @param lockTimeSec
+     * @param type        type of striped lock
+     * @param stripes     Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
+     * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @return Lock instance
      */
     public static Lock createLock(StripedLockType type, int stripes, int lockTimeSec) {

@@ -17,6 +17,13 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 public enum StripedLockType {
+    /**
+     * Lock type with strongly referenced locks. See {@link com.google.common.util.concurrent.Striped#lock(int)}
+     */
     LOCK,
+
+    /**
+     * Lock type with lazily initialized, weakly referenced locks. See {@link com.google.common.util.concurrent.Striped#lazyWeakLock(int)}
+     */
     LAZY_WEAK_LOCK
 }
