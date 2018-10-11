@@ -6,7 +6,7 @@ Main purpose  of **concurrent** create clean quick and simple implementation of 
 
 ### How to use
 
-**Synchronize some execution block by some resource.**
+**Synchronize some execution block by some resource(key).**
 
 
 ```java
@@ -19,7 +19,7 @@ lock.lock(key, () -> {
 });
 
 ```
-Note: **You can throw your custome exception from above lambda block and handle it outside of lock method**
+Note: **You can throw your custom checked exception from above lambda block and handle it outside of lock method**
 
 **Handel InterruptedException**
 
