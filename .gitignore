@@ -16,3 +16,5 @@ buildNumber.properties
 concurrent.iml
 concurrent.ipr
 concurrent.iws
+
+.idea

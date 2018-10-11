@@ -16,11 +16,7 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
-import com.google.common.util.concurrent.Striped;
-
-final class StripedLock extends AbstractStripedLock {
-
-    StripedLock(int stripes, int lockTimeSec) {
-        super(lockTimeSec, Striped.lock(stripes));
-    }
+public enum StripedLockType {
+    LOCK,
+    LAZY_WEAK_LOCK
 }

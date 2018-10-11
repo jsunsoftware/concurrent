@@ -18,9 +18,9 @@ package com.jsunsoft.util.concurrent.locks;
 
 import com.google.common.util.concurrent.Striped;
 
-final class StripedLock extends AbstractStripedLock {
+class StripedLazyWeakLock extends AbstractStripedLock {
 
-    StripedLock(int stripes, int lockTimeSec) {
-        super(lockTimeSec, Striped.lock(stripes));
+    StripedLazyWeakLock(int stripes, int lockTimeSec) {
+        super(lockTimeSec, Striped.lazyWeakLock(stripes));
     }
 }
