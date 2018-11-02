@@ -6,7 +6,7 @@
 
     <groupId>com.jsunsoft.util</groupId>
     <artifactId>concurrent</artifactId>
-    <version>0.0.1-alpha2</version>
+    <version>0.0.1</version>
     <packaging>jar</packaging>
 
     <name>concurrent</name>
@@ -37,7 +37,7 @@
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.12</junit.version>
-        <guava.version>26.0-jre</guava.version>
+        <guava.version>27.0-jre</guava.version>
         <slf4j.version>1.7.25</slf4j.version>
     </properties>
 
