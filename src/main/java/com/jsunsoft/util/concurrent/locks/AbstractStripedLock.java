@@ -72,7 +72,7 @@ abstract class AbstractStripedLock implements Lock {
         requireNonNull(executable, "parameter 'executable' must not be null");
 
         if (resources.stream().allMatch(Objects::nonNull)) {
-            List<Object> lockedResources = new ArrayList<>();
+            List<Object> lockedResources = new ArrayList<>(resources.size());
             try {
                 for (Object resource : resources) {
                     if (striped.get(resource).tryLock(lockTimeSec, TimeUnit.SECONDS)) {
