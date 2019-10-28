@@ -21,81 +21,213 @@ import com.jsunsoft.util.Executable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
 abstract class AbstractStripedLock implements Lock {
     private static final Logger LOGGER = LoggerFactory.getLogger(StripedLock.class);
 
-    private final int lockTimeSec;
+    private final int defaultLockTimeSec;
     private final Striped<java.util.concurrent.locks.Lock> striped;
 
-    AbstractStripedLock(int lockTimeSec, Striped<java.util.concurrent.locks.Lock> striped) {
-        if (lockTimeSec <= 0) {
-            throw new IllegalArgumentException("Parameter [lockTimeSec] must be positive. Current value: ]" + lockTimeSec + ']');
+    AbstractStripedLock(int defaultLockTimeSec, Striped<java.util.concurrent.locks.Lock> striped) {
+        requireNonNull(striped, "parameter 'striped' must not be null");
+
+        if (defaultLockTimeSec <= 0) {
+            throw new IllegalArgumentException("Parameter [lockTimeSec] must be positive. Current value: [" + defaultLockTimeSec + ']');
         }
 
-        this.lockTimeSec = lockTimeSec;
+        this.defaultLockTimeSec = defaultLockTimeSec;
         this.striped = striped;
     }
 
     @Override
     public <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X {
+        lock(resource, defaultLockTimeSec, executable);
+    }
+
+    @Override
+    public <X extends Throwable> void lock(Object resource, int lockTimeSec, Executable<X> executable) throws X {
         requireNonNull(resource, "parameter 'resources' must not be null");
-        lock(Collections.singleton(resource), executable);
+        requireNonNull(executable, "parameter 'executable' must not be null");
+
+        try {
+            lockInterruptibly(resource, lockTimeSec, executable);
+        } catch (InterruptedException e) {
+            handleInterruptException(e);
+        }
     }
 
     @Override
     public <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X {
+        lock(resources, defaultLockTimeSec, executable);
+    }
+
+    @Override
+    public <X extends Throwable> void lock(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws X {
         requireNonNull(resources, "parameter 'resources' must not be null");
         requireNonNull(executable, "parameter 'executable' must not be null");
 
         try {
-            lockInterruptibly(resources, executable);
+            lockInterruptibly(resources, lockTimeSec, executable);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
+            handleInterruptException(e);
         }
     }
 
     @Override
     public <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X {
+        lockInterruptibly(resource, defaultLockTimeSec, executable);
+    }
+
+    @Override
+    public <X extends Throwable> void lockInterruptibly(Object resource, int lockTimeSec, Executable<X> executable) throws InterruptedException, X {
         requireNonNull(resource, "parameter 'resources' must not be null");
-        lockInterruptibly(Collections.singleton(resource), executable);
+        requireNonNull(executable, "parameter 'executable' must not be null");
+
+        try {
+            tryToLock(resource, lockTimeSec);
+            executable.execute();
+        } finally {
+            unlock(resource);
+        }
     }
 
     @Override
     public <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X {
+        lockInterruptibly(resources, defaultLockTimeSec, executable);
+    }
+
+    @Override
+    public <X extends Throwable> void lockInterruptibly(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws InterruptedException, X {
         requireNonNull(resources, "parameter 'resources' must not be null");
         requireNonNull(executable, "parameter 'executable' must not be null");
 
         if (resources.stream().allMatch(Objects::nonNull)) {
             List<Object> lockedResources = new ArrayList<>(resources.size());
+            Consumer<Object> resourceConsumer = lockedResources::add;
+
             try {
                 for (Object resource : resources) {
-                    if (striped.get(resource).tryLock(lockTimeSec, TimeUnit.SECONDS)) {
-
-                        lockedResources.add(resource);
-                        if (LOGGER.isTraceEnabled()) {
-                            LOGGER.trace("The resource: [{}] has been locked", resource);
-                        }
-                    } else {
-                        throw new LockAcquireException("Unable to acquire lock within [" + lockTimeSec + "] seconds for [" + resource + ']');
-                    }
+                    tryToLock(resource, lockTimeSec, resourceConsumer);
                 }
                 executable.execute();
             } finally {
-                lockedResources.forEach(resource -> {
-                    striped.get(resource).unlock();
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("The resource [{}] has been unlocked", resource);
-                    }
-                });
+                lockedResources.forEach(this::unlock);
             }
         } else {
             throw new IllegalArgumentException("Unable to initiate lock on null object.  resources: " + resources);
         }
+    }
+
+    @Override
+    public void lock(Object resource) {
+        lock(resource, defaultLockTimeSec);
+    }
+
+    @Override
+    public void lock(Object resource, int lockTimeSec) {
+        requireNonNull(resource, "parameter 'resource' must not be null");
+
+        try {
+            tryToLock(resource, lockTimeSec);
+        } catch (InterruptedException e) {
+            handleInterruptException(e);
+        }
+    }
+
+    @Override
+    public void lock(Collection<?> resources) {
+        lock(resources, defaultLockTimeSec);
+    }
+
+    @Override
+    public void lock(Collection<?> resources, int lockTimeSec) {
+        requireNonNull(resources, "parameter 'resources' must not be null");
+
+        try {
+            lockInterruptibly(resources, lockTimeSec);
+        } catch (InterruptedException e) {
+            handleInterruptException(e);
+        }
+    }
+
+    @Override
+    public void lockInterruptibly(Object resource) throws InterruptedException {
+        lockInterruptibly(resource, defaultLockTimeSec);
+    }
+
+    @Override
+    public void lockInterruptibly(Object resource, int lockTimeSec) throws InterruptedException {
+        requireNonNull(resource, "parameter 'resource' must not be null");
+        tryToLock(resource, lockTimeSec);
+    }
+
+    @Override
+    public void lockInterruptibly(Collection<?> resources) throws InterruptedException {
+        lockInterruptibly(resources, defaultLockTimeSec);
+    }
+
+    @Override
+    public void lockInterruptibly(Collection<?> resources, int lockTimeSec) throws InterruptedException {
+        requireNonNull(resources, "parameter 'resources' must not be null");
+
+        if (resources.stream().allMatch(Objects::nonNull)) {
+            for (Object resource : resources) {
+                tryToLock(resource, lockTimeSec);
+            }
+        } else {
+            throw new IllegalArgumentException("Unable to initiate lock on null object.  resources: " + resources);
+        }
+    }
+
+    @Override
+    public void unlock(Object resource) {
+        requireNonNull(resource, "parameter 'resource' must not be null");
+
+        striped.get(resource).unlock();
+
+        LOGGER.trace("The resource [{}] has been unlocked", resource);
+    }
+
+    @Override
+    public void unlock(Collection<?> resources) {
+        requireNonNull(resources, "parameter 'resources' must not be null");
+
+        if (resources.stream().allMatch(Objects::nonNull)) {
+            for (Object resource : resources) {
+                unlock(resource);
+            }
+        } else {
+            throw new IllegalArgumentException("Unable to initiate unlock on null object. Resources: " + resources);
+        }
+    }
+
+    private void tryToLock(Object resource, int lockTimeSec, Consumer<Object> resourceConsumer) throws InterruptedException {
+        if (striped.get(resource).tryLock(lockTimeSec, TimeUnit.SECONDS)) {
+
+            if (resourceConsumer != null) {
+                resourceConsumer.accept(resource);
+            }
+
+            LOGGER.trace("The resource: [{}] has been locked", resource);
+        } else {
+            throw new LockAcquireException("Unable to acquire lock within [" + lockTimeSec + "] seconds for [" + resource + ']');
+        }
+    }
+
+    private void tryToLock(Object resource, int lockTimeSec) throws InterruptedException {
+        tryToLock(resource, lockTimeSec, null);
+    }
+
+    private void handleInterruptException(InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
     }
 }
