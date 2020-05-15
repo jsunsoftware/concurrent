@@ -37,8 +37,8 @@
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.12</junit.version>
-        <guava.version>28.1-jre</guava.version>
-        <slf4j.version>1.7.28</slf4j.version>
+        <guava.version>29.0-jre</guava.version>
+        <slf4j.version>1.7.30</slf4j.version>
     </properties>
 
     <distributionManagement>
