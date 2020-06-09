@@ -16,61 +16,59 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
-import com.jsunsoft.util.Executable;
+import com.jsunsoft.util.Command;
 
 import java.util.Collection;
 
 public interface Lock {
 
     /**
-     * @param resource   resource to lock
-     * @param executable Mainly lambda expression which execution will synchronized by resource.
-     *                   The execute method will called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws X                     Custom exception which can be thrown from method execute.
+     * @param resource resource to lock
+     * @param command  Mainly lambda expression which execution will synchronized by resource.
+     *                 The run method will called in synchronized block
+     * @param <X>      Custom exception type which can be thrown from method run.
+     * @throws X                     Custom exception which can be thrown from method run.
      * @throws IllegalStateException If thread was interrupted.
-     *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
+     *                               Use the method {@link #lockInterruptibly(Object, Command)} if thread can be interrupted.
      */
-    <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X;
+    <X extends Throwable> void lock(Object resource, Command<X> command) throws X;
 
     /**
-     * @param resources  collection of resource to lock
-     * @param executable mainly lambda expression which execution will synchronized by resources.
-     *                   The execute method will called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws X                     Custom exception which can be thrown from method execute.
+     * @param resources collection of resource to lock
+     * @param command   mainly lambda expression which execution will synchronized by resources.
+     *                  The run method will called in synchronized block
+     * @param <X>       Custom exception type which can be thrown from method run.
+     * @throws X                     Custom exception which can be thrown from method run.
      * @throws IllegalStateException If thread was interrupted.
-     *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
+     *                               Use the method {@link #lockInterruptibly(Collection, Command)} if thread can be interrupted.
      */
-    <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X;
+    <X extends Throwable> void lock(Collection<?> resources, Command<X> command) throws X;
 
     /**
-     * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted
+     * Difference between the {@link #lock(Object, Command)} that this method throws InterruptedException when thread is interrupted
      *
-     * @param resource   resource to lock
-     * @param executable mainly lambda expression which execution will synchronized by resource.
-     *                   The execute method will called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
+     * @param resource resource to lock
+     * @param command  mainly lambda expression which execution will synchronized by resource.
+     *                 The run method will called in synchronized block
+     * @param <X>      Custom exception type which can be thrown from method run.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
      *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
+     * @throws X                    Custom exception which can be thrown from method run.
      * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
      */
-    <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X;
+    <X extends Throwable> void lockInterruptibly(Object resource, Command<X> command) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted
+     * Difference between the {@link #lock(Collection, Command)} that this method throws InterruptedException when thread is interrupted
      *
-     * @param resources  collection of resource to lock
-     * @param executable mainly lambda expression which execution will synchronized by resource.
-     *                   The execute method will called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
+     * @param resources collection of resource to lock
+     * @param command   mainly lambda expression which execution will synchronized by resource.
+     *                  The run method will called in synchronized block
+     * @param <X>       Custom exception type which can be thrown from method run.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
      *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
+     * @throws X                    Custom exception which can be thrown from method run.
      * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
      */
-    <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X;
-
-
+    <X extends Throwable> void lockInterruptibly(Collection<?> resources, Command<X> command) throws InterruptedException, X;
 }
