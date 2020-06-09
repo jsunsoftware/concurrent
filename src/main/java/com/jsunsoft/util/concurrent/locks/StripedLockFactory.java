@@ -29,19 +29,19 @@ public class StripedLockFactory {
      *
      * @param type        type of striped lock
      * @param stripes     Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
-     * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param defaultLockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @return Lock instance
      */
-    public static Lock createLock(StripedLockType type, int stripes, int lockTimeSec) {
+    public static Lock createLock(StripedLockType type, int stripes, int defaultLockTimeSec) {
         Objects.requireNonNull(type, "parameter 'type' may not be null");
 
         Lock result;
         switch (type) {
             case LOCK:
-                result = new StripedLock(stripes, lockTimeSec);
+                result = new StripedLock(stripes, defaultLockTimeSec);
                 break;
             case LAZY_WEAK_LOCK:
-                result = new StripedLazyWeakLock(stripes, lockTimeSec);
+                result = new StripedLazyWeakLock(stripes, defaultLockTimeSec);
                 break;
             default:
                 throw new IllegalStateException("Unhandled type: " + type);

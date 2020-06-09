@@ -19,10 +19,13 @@ package com.jsunsoft.util.concurrent.locks;
 import com.jsunsoft.util.Executable;
 
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 public interface Lock {
 
     /**
+     * Uses the default {@code lockTimeSec}
+     *
      * @param resource   resource to lock
      * @param executable Mainly lambda expression which execution will synchronized by resource.
      *                   The execute method will called in synchronized block
@@ -30,10 +33,25 @@ public interface Lock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
+     * @see #lock(Object, int, Executable)
      */
     <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X;
 
     /**
+     * @param resource    resource to lock
+     * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param executable  Mainly lambda expression which execution will synchronized by resource.
+     *                    The execute method will called in synchronized block
+     * @param <X>         Custom exception type which can be thrown from method execute.
+     * @throws X                     Custom exception which can be thrown from method execute.
+     * @throws IllegalStateException If thread was interrupted.
+     *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
+     */
+    <X extends Throwable> void lock(Object resource, int lockTimeSec, Executable<X> executable) throws X;
+
+    /**
+     * Uses the default {@code lockTimeSec}
+     *
      * @param resources  collection of resource to lock
      * @param executable mainly lambda expression which execution will synchronized by resources.
      *                   The execute method will called in synchronized block
@@ -41,11 +59,25 @@ public interface Lock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
+     * @see #lock(Collection, int, Executable)
      */
     <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X;
 
     /**
-     * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted
+     * @param resources   collection of resource to lock
+     * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param executable  mainly lambda expression which execution will synchronized by resources.
+     *                    The execute method will called in synchronized block
+     * @param <X>         Custom exception type which can be thrown from method execute.
+     * @throws X                     Custom exception which can be thrown from method execute.
+     * @throws IllegalStateException If thread was interrupted.
+     *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
+     */
+    <X extends Throwable> void lock(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws X;
+
+    /**
+     * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted.
+     * Uses the default {@code lockTimeSec}
      *
      * @param resource   resource to lock
      * @param executable mainly lambda expression which execution will synchronized by resource.
@@ -55,11 +87,28 @@ public interface Lock {
      *                              (and interruption of lock acquisition is supported)
      * @throws X                    Custom exception which can be thrown from method execute.
      * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lockInterruptibly(Collection, int, Executable)
      */
     <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted
+     * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted
+     *
+     * @param resource    resource to lock
+     * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param executable  mainly lambda expression which execution will synchronized by resource.
+     *                    The execute method will called in synchronized block
+     * @param <X>         Custom exception type which can be thrown from method execute.
+     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
+     *                              (and interruption of lock acquisition is supported)
+     * @throws X                    Custom exception which can be thrown from method execute.
+     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     */
+    <X extends Throwable> void lockInterruptibly(Object resource, int lockTimeSec, Executable<X> executable) throws InterruptedException, X;
+
+    /**
+     * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted.
+     * Uses the default {@code lockTimeSec}
      *
      * @param resources  collection of resource to lock
      * @param executable mainly lambda expression which execution will synchronized by resource.
@@ -69,8 +118,39 @@ public interface Lock {
      *                              (and interruption of lock acquisition is supported)
      * @throws X                    Custom exception which can be thrown from method execute.
      * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lockInterruptibly(Collection, int, Executable)
      */
     <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X;
 
+    /**
+     * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted
+     *
+     * @param resources   collection of resource to lock
+     * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param executable  mainly lambda expression which execution will synchronized by resource.
+     *                    The execute method will called in synchronized block
+     * @param <X>         Custom exception type which can be thrown from method execute.
+     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
+     */
+    <X extends Throwable> void lockInterruptibly(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws InterruptedException, X;
 
+    void lock(Object resource);
+
+    void lock(Object resource, int lockTimeSec);
+
+    void lock(Collection<?> resources);
+
+    void lock(Collection<?> resources, int lockTimeSec);
+
+    void lockInterruptibly(Object resource) throws InterruptedException;
+
+    void lockInterruptibly(Object resource, int lockTimeSec) throws InterruptedException;
+
+    void lockInterruptibly(Collection<?> resources) throws InterruptedException;
+
+    void lockInterruptibly(Collection<?> resources, int lockTimeSec) throws InterruptedException;
+
+    void unlock(Object resource);
+
+    void unlock(Collection<?> resources);
 }
