@@ -17,7 +17,7 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 import com.google.common.util.concurrent.Striped;
-import com.jsunsoft.util.Executable;
+import com.jsunsoft.util.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,18 +42,18 @@ abstract class AbstractStripedLock implements Lock {
     }
 
     @Override
-    public <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X {
+    public <X extends Throwable> void lock(Object resource, Command<X> command) throws X {
         requireNonNull(resource, "parameter 'resources' must not be null");
-        lock(Collections.singleton(resource), executable);
+        lock(Collections.singleton(resource), command);
     }
 
     @Override
-    public <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X {
+    public <X extends Throwable> void lock(Collection<?> resources, Command<X> command) throws X {
         requireNonNull(resources, "parameter 'resources' must not be null");
-        requireNonNull(executable, "parameter 'executable' must not be null");
+        requireNonNull(command, "parameter 'command' must not be null");
 
         try {
-            lockInterruptibly(resources, executable);
+            lockInterruptibly(resources, command);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
@@ -61,15 +61,15 @@ abstract class AbstractStripedLock implements Lock {
     }
 
     @Override
-    public <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X {
+    public <X extends Throwable> void lockInterruptibly(Object resource, Command<X> command) throws InterruptedException, X {
         requireNonNull(resource, "parameter 'resources' must not be null");
-        lockInterruptibly(Collections.singleton(resource), executable);
+        lockInterruptibly(Collections.singleton(resource), command);
     }
 
     @Override
-    public <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X {
+    public <X extends Throwable> void lockInterruptibly(Collection<?> resources, Command<X> command) throws InterruptedException, X {
         requireNonNull(resources, "parameter 'resources' must not be null");
-        requireNonNull(executable, "parameter 'executable' must not be null");
+        requireNonNull(command, "parameter 'command' must not be null");
 
         if (resources.stream().allMatch(Objects::nonNull)) {
             List<Object> lockedResources = new ArrayList<>(resources.size());
@@ -85,7 +85,7 @@ abstract class AbstractStripedLock implements Lock {
                         throw new LockAcquireException("Unable to acquire lock within [" + lockTimeSec + "] seconds for [" + resource + ']');
                     }
                 }
-                executable.execute();
+                command.run();
             } finally {
                 lockedResources.forEach(resource -> {
                     striped.get(resource).unlock();

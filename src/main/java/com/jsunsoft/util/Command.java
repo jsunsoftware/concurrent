@@ -17,7 +17,7 @@ package com.jsunsoft.util;
  */
 
 @FunctionalInterface
-public interface Executable<X extends Throwable> {
+public interface Command<X extends Throwable> {
 
-    void execute() throws X;
+    void run() throws X;
 }
