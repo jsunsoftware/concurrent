@@ -131,6 +131,7 @@ public interface Lock {
      *                    The execute method will called in synchronized block
      * @param <X>         Custom exception type which can be thrown from method execute.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
+     * @throws X                    Custom exception which can be thrown from method execute.
      */
     <X extends Throwable> void lockInterruptibly(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws InterruptedException, X;
 
