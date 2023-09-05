@@ -16,17 +16,17 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class StripedLockTest {
+class StripedLockTest {
 
     @Test
-    public void test() throws InterruptedException {
+    void test() throws InterruptedException {
         Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
 
         Res res = new Res();
@@ -52,7 +52,7 @@ public class StripedLockTest {
         for (Thread thread : threads) {
             thread.join();
         }
-        Assert.assertEquals(1, res.version);
+        Assertions.assertEquals(1, res.version);
     }
 
     private static class Res {
