@@ -31,7 +31,7 @@ import java.util.function.Consumer;
 import static java.util.Objects.requireNonNull;
 
 abstract class AbstractStripedLock implements Lock {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StripedLock.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractStripedLock.class);
 
     private final int defaultLockTimeSec;
     private final Striped<java.util.concurrent.locks.Lock> striped;
@@ -91,11 +91,19 @@ abstract class AbstractStripedLock implements Lock {
         requireNonNull(resource, "parameter 'resources' must not be null");
         requireNonNull(executable, "parameter 'executable' must not be null");
 
+        boolean unlock = true;
+
         try {
             tryToLock(resource, lockTimeSec);
             executable.execute();
+        } catch (LockAcquireException e) {
+            unlock = false;
+
+            throw e;
         } finally {
-            unlock(resource);
+            if (unlock) {
+                unlock(resource);
+            }
         }
     }
 
@@ -119,7 +127,7 @@ abstract class AbstractStripedLock implements Lock {
                 }
                 executable.execute();
             } finally {
-                lockedResources.forEach(this::unlock);
+                unlock(lockedResources);
             }
         } else {
             throw new IllegalArgumentException("Unable to initiate lock on null object.  resources: " + resources);
@@ -200,12 +208,11 @@ abstract class AbstractStripedLock implements Lock {
     public void unlock(Collection<?> resources) {
         requireNonNull(resources, "parameter 'resources' must not be null");
 
-        if (resources.stream().allMatch(Objects::nonNull)) {
-            for (Object resource : resources) {
-                unlock(resource);
-            }
-        } else {
-            throw new IllegalArgumentException("Unable to initiate unlock on null object. Resources: " + resources);
+        if (!resources.isEmpty()) {
+            resources
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .forEach(this::unlock);
         }
     }
 
