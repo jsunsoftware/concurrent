@@ -27,7 +27,7 @@ class StripedLockTest {
 
     @Test
     void test() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 1);
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
 
         Res res = new Res();
 
