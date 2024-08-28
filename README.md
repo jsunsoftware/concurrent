@@ -17,7 +17,6 @@ String key = "taskA";
 lock.lock(key, () -> {
     //the code which must be executed.
 });
-
 ```
 
 **or if locked statement returns result**
@@ -31,7 +30,6 @@ Object lockResult = lock(key, () -> {
         //the code which must be executed.
         return result;
 });
-
 ```
 
 Note: **You can throw your custom checked exception from above lambda block and handle it outside of lock method**
@@ -69,7 +67,17 @@ lock.lock(keys, () -> {
 
 ```java
 Lock lock = StripedLockFactory.createLock(StripedLockType.LAZY_WEAK_LOCK, 8, 30); // See the javadoc to params information
-
 ```
 
 For difference between StripedLockType.LOCK and StripedLockType.LAZY_WEAK_LOCK you can see javadoc.
+
+**To use from maven add this snippet to the pom.xml `dependencies` section:**
+
+```xml
+
+<dependency>
+    <groupId>com.jsunsoft.util</groupId>
+    <artifactId>concurrent</artifactId>
+    <version>1.0.2</version>
+</dependency>
+```
