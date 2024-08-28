@@ -27,9 +27,7 @@ Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 8, 30); // See t
 
 String key = "taskA";
 
-lock.
-
-lock(key, () ->{
+Object lockResult = lock(key, () -> {
         //the code which must be executed.
         return result;
 });
