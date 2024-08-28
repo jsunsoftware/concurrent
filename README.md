@@ -19,6 +19,23 @@ lock.lock(key, () -> {
 });
 
 ```
+
+**or if locked statement returns result**
+
+```java
+Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 8, 30); // See the javadoc to params information
+
+String key = "taskA";
+
+lock.
+
+lock(key, () ->{
+        //the code which must be executed.
+        return result;
+});
+
+```
+
 Note: **You can throw your custom checked exception from above lambda block and handle it outside of lock method**
 
 **Handel InterruptedException**
