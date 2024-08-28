@@ -42,7 +42,8 @@ class StripedLockTest {
                                 }
                                 res.version++;
                             }
-                        }))
+                        })
+                )
                 .limit(5)
                 .map(Thread::new)
                 .collect(Collectors.toSet());
@@ -54,6 +55,106 @@ class StripedLockTest {
         }
         Assertions.assertEquals(1, res.version);
     }
+
+    @Test
+    void lockSingleResource() throws InterruptedException {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        Res res = new Res();
+
+        lock.lock(res.id, () -> res.version++);
+
+        Assertions.assertEquals(1, res.version);
+    }
+
+    @Test
+    void lockMultipleResources() throws InterruptedException {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        Res res1 = new Res();
+        Res res2 = new Res();
+
+        lock.lock(Stream.of(res1.id, res2.id).collect(Collectors.toList()), () -> {
+            res1.version++;
+            res2.version++;
+        });
+
+        Assertions.assertEquals(1, res1.version);
+        Assertions.assertEquals(1, res2.version);
+    }
+
+    @Test
+    void lockWithTimeout() throws InterruptedException {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 1);
+        Res res = new Res();
+
+        lock.lock(res.id, 1, () -> res.version++);
+
+        Assertions.assertEquals(1, res.version);
+    }
+
+    @Test
+    void lockInterruptibly() throws InterruptedException {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        Res res = new Res();
+
+        Thread thread = new Thread(() -> {
+            try {
+                lock.lockInterruptibly(res.id, () -> res.version++);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        thread.start();
+        thread.join();
+
+        Assertions.assertEquals(1, res.version);
+    }
+
+    @Test
+    void lockInterruptiblyWithTimeout() throws InterruptedException {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 1);
+        Res res = new Res();
+
+        Thread thread = new Thread(() -> {
+            try {
+                lock.lockInterruptibly(res.id, 1, () -> res.version++);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        thread.start();
+        thread.join();
+
+        Assertions.assertEquals(1, res.version);
+    }
+
+    @Test
+    void unlockSingleResource() {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        Res res = new Res();
+
+        lock.lock(res.id);
+        lock.unlock(res.id);
+
+        Assertions.assertDoesNotThrow(() -> lock.lock(res.id, () -> res.version++));
+    }
+
+    @Test
+    void unlockMultipleResources() {
+        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        Res res1 = new Res();
+        Res res2 = new Res();
+
+        lock.lock(Stream.of(res1.id, res2.id).collect(Collectors.toList()));
+        lock.unlock(Stream.of(res1.id, res2.id).collect(Collectors.toList()));
+
+        Assertions.assertDoesNotThrow(() -> lock.lock(Stream.of(res1.id, res2.id).collect(Collectors.toList()), () -> {
+            res1.version++;
+            res2.version++;
+        }));
+    }
+
 
     private static class Res {
         int id;
