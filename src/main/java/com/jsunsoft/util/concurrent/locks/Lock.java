@@ -17,6 +17,7 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 import com.jsunsoft.util.Executable;
+import com.jsunsoft.util.LockCallback;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +38,8 @@ public interface Lock {
      */
     <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X;
 
+    <R, X extends Throwable> R lock(Object resource, LockCallback<R, X> callback) throws X;
+
     /**
      * @param resource    resource to lock
      * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
@@ -48,6 +51,8 @@ public interface Lock {
      *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
      */
     <X extends Throwable> void lock(Object resource, int lockTimeSec, Executable<X> executable) throws X;
+
+    <R, X extends Throwable> R lock(Object resource, int lockTimeSec, LockCallback<R, X> callback) throws X;
 
     /**
      * Uses the default {@code lockTimeSec}
@@ -63,6 +68,8 @@ public interface Lock {
      */
     <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X;
 
+    <R, X extends Throwable> R lock(Collection<?> resources, LockCallback<R, X> callback) throws X;
+
     /**
      * @param resources   collection of resource to lock
      * @param lockTimeSec the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
@@ -74,6 +81,8 @@ public interface Lock {
      *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
      */
     <X extends Throwable> void lock(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws X;
+
+    <R, X extends Throwable> R lock(Collection<?> resources, int lockTimeSec, LockCallback<R, X> callback) throws X;
 
     /**
      * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted.
@@ -91,6 +100,8 @@ public interface Lock {
      */
     <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X;
 
+    <R, X extends Throwable> R lockInterruptibly(Object resource, LockCallback<R, X> callback) throws InterruptedException, X;
+
     /**
      * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted
      *
@@ -105,6 +116,8 @@ public interface Lock {
      * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <X extends Throwable> void lockInterruptibly(Object resource, int lockTimeSec, Executable<X> executable) throws InterruptedException, X;
+
+    <R, X extends Throwable> R lockInterruptibly(Object resource, int lockTimeSec, LockCallback<R, X> callback) throws InterruptedException, X;
 
     /**
      * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted.
@@ -122,6 +135,8 @@ public interface Lock {
      */
     <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X;
 
+    <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, LockCallback<R, X> callback) throws InterruptedException, X;
+
     /**
      * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted
      *
@@ -134,6 +149,8 @@ public interface Lock {
      * @throws X                    Custom exception which can be thrown from method execute.
      */
     <X extends Throwable> void lockInterruptibly(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws InterruptedException, X;
+
+    <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, int lockTimeSec, LockCallback<R, X> callback) throws InterruptedException, X;
 
     void lock(Object resource);
 
