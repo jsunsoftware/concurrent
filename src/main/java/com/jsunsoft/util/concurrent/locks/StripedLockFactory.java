@@ -44,7 +44,7 @@ public class StripedLockFactory {
                 result = new StripedLazyWeakLock(stripes, defaultLockTimeSec);
                 break;
             default:
-                throw new IllegalStateException("Unhandled type: " + type);
+                throw new IllegalArgumentException("Unhandled type: " + type);
         }
         return result;
     }

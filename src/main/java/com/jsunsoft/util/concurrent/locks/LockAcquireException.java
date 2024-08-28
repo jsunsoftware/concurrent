@@ -16,10 +16,22 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
-@SuppressWarnings("serial")
 public class LockAcquireException extends RuntimeException {
 
-    LockAcquireException(String message) {
+    private final Object resource;
+    private final long lockTimeSec;
+
+    LockAcquireException(String message, Object resource, long lockTimeSec) {
         super(message);
+        this.resource = resource;
+        this.lockTimeSec = lockTimeSec;
+    }
+
+    public Object getResource() {
+        return resource;
+    }
+
+    public long getLockTimeSec() {
+        return lockTimeSec;
     }
 }

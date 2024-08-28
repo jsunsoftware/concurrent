@@ -289,7 +289,7 @@ abstract class AbstractStripedLock implements Lock {
 
             LOGGER.trace("The resource: [{}] has been locked", resource);
         } else {
-            throw new LockAcquireException("Unable to acquire lock within [" + lockTimeSec + "] seconds for [" + resource + ']');
+            throw new LockAcquireException("Unable to acquire lock within [" + lockTimeSec + "] seconds for [" + resource + ']', resource, lockTimeSec);
         }
     }
 
