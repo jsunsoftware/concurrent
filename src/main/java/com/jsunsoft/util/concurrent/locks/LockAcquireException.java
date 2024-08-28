@@ -18,6 +18,8 @@ package com.jsunsoft.util.concurrent.locks;
 
 public class LockAcquireException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     private final Object resource;
     private final long lockTimeSec;
 

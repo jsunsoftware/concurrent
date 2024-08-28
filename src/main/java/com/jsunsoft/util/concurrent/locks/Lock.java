@@ -49,6 +49,7 @@ public interface Lock {
      *                 The execute method will be called in synchronized block
      * @param <R>      Return type of the callback.
      * @param <X>      Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, LockCallback)} if thread can be interrupted.
@@ -74,6 +75,7 @@ public interface Lock {
      *                    The execute method will be called in synchronized block
      * @param <R>         Return type of the callback.
      * @param <X>         Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, LockCallback)} if thread can be interrupted.
@@ -102,6 +104,7 @@ public interface Lock {
      *                  The execute method will be called in synchronized block
      * @param <R>       Return type of the callback.
      * @param <X>       Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, LockCallback)} if thread can be interrupted.
@@ -127,6 +130,7 @@ public interface Lock {
      *                    The execute method will be called in synchronized block
      * @param <R>         Return type of the callback.
      * @param <X>         Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, LockCallback)} if thread can be interrupted.
@@ -153,11 +157,12 @@ public interface Lock {
      * Difference between the {@link #lock(Object, LockCallback)} that this method throws InterruptedException when thread is interrupted.
      * Uses the default {@code lockTimeSec}.
      *
-     * @param resource   resource to lock
-     * @param callback   Callback which execution will be synchronized by resource.
-     *                   The execute method will be called in synchronized block
-     * @param <R>        Return type of the callback.
-     * @param <X>        Custom exception type which can be thrown from method execute.
+     * @param resource resource to lock
+     * @param callback Callback which execution will be synchronized by resource.
+     *                 The execute method will be called in synchronized block
+     * @param <R>      Return type of the callback.
+     * @param <X>      Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
      *                              (and interruption of lock acquisition is supported)
      * @throws X                    Custom exception which can be thrown from method execute.
@@ -189,6 +194,7 @@ public interface Lock {
      *                    The execute method will be called in synchronized block
      * @param <R>         Return type of the callback.
      * @param <X>         Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
      *                              (and interruption of lock acquisition is supported)
      * @throws X                    Custom exception which can be thrown from method execute.
@@ -216,11 +222,12 @@ public interface Lock {
      * Difference between the {@link #lock(Collection, LockCallback)} that this method throws InterruptedException when thread is interrupted.
      * Uses the default {@code lockTimeSec}.
      *
-     * @param resources  collection of resources to lock
-     * @param callback   Callback which execution will be synchronized by resources.
-     *                   The execute method will be called in synchronized block
-     * @param <R>        Return type of the callback.
-     * @param <X>        Custom exception type which can be thrown from method execute.
+     * @param resources collection of resources to lock
+     * @param callback  Callback which execution will be synchronized by resources.
+     *                  The execute method will be called in synchronized block
+     * @param <R>       Return type of the callback.
+     * @param <X>       Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
      *                              (and interruption of lock acquisition is supported)
      * @throws X                    Custom exception which can be thrown from method execute.
@@ -250,6 +257,7 @@ public interface Lock {
      *                    The execute method will be called in synchronized block
      * @param <R>         Return type of the callback.
      * @param <X>         Custom exception type which can be thrown from method execute.
+     * @return The result of the callback execution.
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
      * @throws X                    Custom exception which can be thrown from method execute.
      */
