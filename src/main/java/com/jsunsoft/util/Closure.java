@@ -17,7 +17,7 @@ package com.jsunsoft.util;
  */
 
 @FunctionalInterface
-public interface LockCallback<R, X extends Throwable> {
+public interface Closure<R, X extends Throwable> {
 
     R call() throws X;
 }

@@ -16,24 +16,26 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
+import java.time.Duration;
+
 public class LockAcquireException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
     private final Object resource;
-    private final long lockTimeSec;
+    private final Duration timeout;
 
-    LockAcquireException(String message, Object resource, long lockTimeSec) {
+    LockAcquireException(String message, Object resource, Duration timeout) {
         super(message);
         this.resource = resource;
-        this.lockTimeSec = lockTimeSec;
+        this.timeout = timeout;
     }
 
     public Object getResource() {
         return resource;
     }
 
-    public long getLockTimeSec() {
-        return lockTimeSec;
+    public Duration getTimeout() {
+        return timeout;
     }
 }

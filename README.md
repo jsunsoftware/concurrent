@@ -2,7 +2,7 @@
 
 This lib is built on [google/guava](https://github.com/google/guava) based on [Striped](https://google.github.io/guava/releases/snapshot/api/docs/com/google/common/util/concurrent/Striped.html).
 
-Main purpose  of **concurrent** create clean quick and simple implementation of Striped lock. 
+Main purpose of **concurrent** create clean quick and simple usage of Striped lock.
 
 ### How to use
 
@@ -10,7 +10,7 @@ Main purpose  of **concurrent** create clean quick and simple implementation of 
 
 
 ```java
-Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 8, 30); // See the javadoc to params information
+StripedLock lock = StripedLock.of(8, Duration.ofSeconds(30)); // See the javadoc to params information
 
 String key = "taskA";
 
@@ -22,7 +22,7 @@ lock.lock(key, () -> {
 **or if locked statement returns result**
 
 ```java
-Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 8, 30); // See the javadoc to params information
+StripedLock lock = StripedLock.of(8, Duration.ofSeconds(30)); // See the javadoc to params information
 
 String key = "taskA";
 
@@ -40,7 +40,7 @@ If thread can be interrupted you must use the method `lockInterruptibly`.
 This method throws InterruptedException when current thread is interrupted.
 
 ```java
-Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 8, 30); // See the javadoc to params information
+StripedLock lock = StripedLock.of(8, Duration.ofSeconds(30)); // See the javadoc to params information
 
 String key = "taskA";
 
@@ -54,7 +54,7 @@ lock.lockInterruptibly(key, () -> {
 When you have some keys collection to lock some block you can do following:
 
 ```java
-Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 8, 30); // See the javadoc to params information
+StripedLock lock = StripedLock.of(8, Duration.ofSeconds(30)); // See the javadoc to params information
 
 Collection<String> keys = ImmutableList.of("taskA", "taskB");
 
@@ -63,10 +63,10 @@ lock.lock(keys, () -> {
 });
 ```
 
-**Create lazy weak lock instance**
+**Create lazy weak StripedLock instance**
 
 ```java
-Lock lock = StripedLockFactory.createLock(StripedLockType.LAZY_WEAK_LOCK, 8, 30); // See the javadoc to params information
+StripedLock lock = StripedLock.of(StripedLockType.LAZY_WEAK_LOCK, 8, Duration.ofSeconds(30)); // See the javadoc to params information
 ```
 
 For difference between StripedLockType.LOCK and StripedLockType.LAZY_WEAK_LOCK you can see javadoc.
@@ -78,6 +78,6 @@ For difference between StripedLockType.LOCK and StripedLockType.LAZY_WEAK_LOCK y
 <dependency>
     <groupId>com.jsunsoft.util</groupId>
     <artifactId>concurrent</artifactId>
-    <version>1.0.2</version>
+    <version>2.0.0</version>
 </dependency>
 ```

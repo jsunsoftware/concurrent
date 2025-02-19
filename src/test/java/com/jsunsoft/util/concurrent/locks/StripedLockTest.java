@@ -19,15 +19,19 @@ package com.jsunsoft.util.concurrent.locks;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class StripedLockTest {
 
+    private static final Duration TIMEOUT1 = Duration.ofSeconds(1);
+    private static final Duration TIMEOUT30 = Duration.ofSeconds(30);
+
     @Test
     void test() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
 
         Res res = new Res();
 
@@ -58,7 +62,7 @@ class StripedLockTest {
 
     @Test
     void lockSingleResource() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res = new Res();
 
         lock.lock(res.id, () -> res.version++);
@@ -68,7 +72,7 @@ class StripedLockTest {
 
     @Test
     void lockMultipleResources() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res1 = new Res();
         Res res2 = new Res();
 
@@ -83,17 +87,17 @@ class StripedLockTest {
 
     @Test
     void lockWithTimeout() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 1);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT1);
         Res res = new Res();
 
-        lock.lock(res.id, 1, () -> res.version++);
+        lock.lock(res.id, TIMEOUT1, () -> res.version++);
 
         Assertions.assertEquals(1, res.version);
     }
 
     @Test
     void lockInterruptibly() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res = new Res();
 
         Thread thread = new Thread(() -> {
@@ -112,12 +116,12 @@ class StripedLockTest {
 
     @Test
     void lockInterruptiblyWithTimeout() throws InterruptedException {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 1);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT1);
         Res res = new Res();
 
         Thread thread = new Thread(() -> {
             try {
-                lock.lockInterruptibly(res.id, 1, () -> res.version++);
+                lock.lockInterruptibly(res.id, TIMEOUT1, () -> res.version++);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -131,7 +135,7 @@ class StripedLockTest {
 
     @Test
     void unlockSingleResource() {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res = new Res();
 
         lock.lock(res.id);
@@ -142,7 +146,7 @@ class StripedLockTest {
 
     @Test
     void unlockMultipleResources() {
-        Lock lock = StripedLockFactory.createLock(StripedLockType.LOCK, 5, 30);
+        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res1 = new Res();
         Res res2 = new Res();
 

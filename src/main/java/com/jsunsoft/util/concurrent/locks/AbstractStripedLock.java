@@ -18,59 +18,60 @@ package com.jsunsoft.util.concurrent.locks;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Striped;
+import com.jsunsoft.util.Closure;
 import com.jsunsoft.util.Executable;
-import com.jsunsoft.util.LockCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractStripedLock implements Lock {
+abstract class AbstractStripedLock implements StripedLock {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractStripedLock.class);
 
-    private final int defaultLockTimeSec;
-    private final Striped<java.util.concurrent.locks.Lock> striped;
+    private final Duration defaultTimeout;
+    private final Striped<Lock> striped;
 
-    AbstractStripedLock(int defaultLockTimeSec, Striped<java.util.concurrent.locks.Lock> striped) {
+    AbstractStripedLock(Duration defaultTimeout, Striped<Lock> striped) {
         requireNonNull(striped, "Parameter [striped] must not be null");
+        validateTimeout(defaultTimeout);
 
-        Preconditions.checkArgument(defaultLockTimeSec > 0, "Parameter [defaultLockTimeSec] must be positive. Current value: [%s]", defaultLockTimeSec);
-
-        this.defaultLockTimeSec = defaultLockTimeSec;
+        this.defaultTimeout = defaultTimeout;
         this.striped = striped;
     }
 
     @Override
     public <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X {
-        lock(resource, defaultLockTimeSec, executable);
+        lock(resource, defaultTimeout, executable);
     }
 
     @Override
-    public <R, X extends Throwable> R lock(Object resource, LockCallback<R, X> callback) throws X {
-        return lock(resource, defaultLockTimeSec, callback);
+    public <R, X extends Throwable> R lock(Object resource, Closure<R, X> callback) throws X {
+        return lock(resource, defaultTimeout, callback);
     }
 
     @Override
-    public <X extends Throwable> void lock(Object resource, int lockTimeSec, Executable<X> executable) throws X {
+    public <X extends Throwable> void lock(Object resource, Duration timeout, Executable<X> executable) throws X {
 
         try {
-            lockInterruptibly(resource, lockTimeSec, executable);
+            lockInterruptibly(resource, timeout, executable);
         } catch (InterruptedException e) {
             handleInterruptException(e);
         }
     }
 
     @Override
-    public <R, X extends Throwable> R lock(Object resource, int lockTimeSec, LockCallback<R, X> callback) throws X {
+    public <R, X extends Throwable> R lock(Object resource, Duration timeout, Closure<R, X> callback) throws X {
         try {
-            return lockInterruptibly(resource, lockTimeSec, callback);
+            return lockInterruptibly(resource, timeout, callback);
         } catch (InterruptedException e) {
             throw interruptAndResolveException(e);
         }
@@ -78,29 +79,29 @@ abstract class AbstractStripedLock implements Lock {
 
     @Override
     public <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X {
-        lock(resources, defaultLockTimeSec, executable);
+        lock(resources, defaultTimeout, executable);
     }
 
     @Override
-    public <R, X extends Throwable> R lock(Collection<?> resources, LockCallback<R, X> callback) throws X {
-        return lock(resources, defaultLockTimeSec, callback);
+    public <R, X extends Throwable> R lock(Collection<?> resources, Closure<R, X> callback) throws X {
+        return lock(resources, defaultTimeout, callback);
     }
 
     @Override
-    public <X extends Throwable> void lock(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws X {
+    public <X extends Throwable> void lock(Collection<?> resources, Duration timeout, Executable<X> executable) throws X {
 
         try {
-            lockInterruptibly(resources, lockTimeSec, executable);
+            lockInterruptibly(resources, timeout, executable);
         } catch (InterruptedException e) {
             handleInterruptException(e);
         }
     }
 
     @Override
-    public <R, X extends Throwable> R lock(Collection<?> resources, int lockTimeSec, LockCallback<R, X> callback) throws X {
+    public <R, X extends Throwable> R lock(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws X {
 
         try {
-            return lockInterruptibly(resources, lockTimeSec, callback);
+            return lockInterruptibly(resources, timeout, callback);
         } catch (InterruptedException e) {
             throw interruptAndResolveException(e);
         }
@@ -108,26 +109,26 @@ abstract class AbstractStripedLock implements Lock {
 
     @Override
     public <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X {
-        lockInterruptibly(resource, defaultLockTimeSec, executable);
+        lockInterruptibly(resource, defaultTimeout, executable);
     }
 
     @Override
-    public <R, X extends Throwable> R lockInterruptibly(Object resource, LockCallback<R, X> callback) throws InterruptedException, X {
-        return lockInterruptibly(resource, defaultLockTimeSec, callback);
+    public <R, X extends Throwable> R lockInterruptibly(Object resource, Closure<R, X> callback) throws InterruptedException, X {
+        return lockInterruptibly(resource, defaultTimeout, callback);
     }
 
     @Override
-    public <X extends Throwable> void lockInterruptibly(Object resource, int lockTimeSec, Executable<X> executable) throws InterruptedException, X {
+    public <X extends Throwable> void lockInterruptibly(Object resource, Duration timeout, Executable<X> executable) throws InterruptedException, X {
         requireNonNull(executable, "Parameter [executable] must not be null");
 
-        lockInterruptibly(resource, lockTimeSec, (LockCallback<Void, X>) () -> {
+        lockInterruptibly(resource, timeout, (Closure<Void, X>) () -> {
             executable.execute();
             return null;
         });
     }
 
     @Override
-    public <R, X extends Throwable> R lockInterruptibly(Object resource, int lockTimeSec, LockCallback<R, X> callback) throws InterruptedException, X {
+    public <R, X extends Throwable> R lockInterruptibly(Object resource, Duration timeout, Closure<R, X> callback) throws InterruptedException, X {
 
         requireNonNull(callback, "Parameter [callback] must not be null");
 
@@ -135,7 +136,7 @@ abstract class AbstractStripedLock implements Lock {
         boolean unlock = true;
 
         try {
-            tryToLock(resource, lockTimeSec);
+            tryToLock(resource, timeout);
             result = callback.call();
         } catch (LockAcquireException e) {
             unlock = false;
@@ -152,30 +153,29 @@ abstract class AbstractStripedLock implements Lock {
 
     @Override
     public <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X {
-        lockInterruptibly(resources, defaultLockTimeSec, executable);
+        lockInterruptibly(resources, defaultTimeout, executable);
     }
 
     @Override
-    public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, LockCallback<R, X> callback) throws InterruptedException, X {
-        return lockInterruptibly(resources, defaultLockTimeSec, callback);
+    public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Closure<R, X> callback) throws InterruptedException, X {
+        return lockInterruptibly(resources, defaultTimeout, callback);
     }
 
     @Override
-    public <X extends Throwable> void lockInterruptibly(Collection<?> resources, int lockTimeSec, Executable<X> executable) throws InterruptedException, X {
+    public <X extends Throwable> void lockInterruptibly(Collection<?> resources, Duration timeout, Executable<X> executable) throws InterruptedException, X {
         requireNonNull(executable, "Parameter [executable] must not be null");
 
-        lockInterruptibly(resources, lockTimeSec, (LockCallback<Void, X>) () -> {
+        lockInterruptibly(resources, timeout, (Closure<Void, X>) () -> {
             executable.execute();
             return null;
         });
     }
 
     @Override
-    public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, int lockTimeSec, LockCallback<R, X> callback) throws InterruptedException, X {
+    public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws InterruptedException, X {
         requireNonNull(resources, "Parameter [resources] must not be null");
         requireNonNull(callback, "parameter 'callback' must not be null");
-        Preconditions.checkArgument(lockTimeSec > 0, "Parameter [lockTimeSec] must be positive. Current value: [%s]", lockTimeSec);
-
+        validateTimeout(timeout);
         R result;
 
         if (resources.stream().allMatch(Objects::nonNull)) {
@@ -184,7 +184,7 @@ abstract class AbstractStripedLock implements Lock {
 
             try {
                 for (Object resource : resources) {
-                    tryToLock(resource, lockTimeSec, resourceConsumer);
+                    tryToLock(resource, timeout, resourceConsumer);
                 }
                 result = callback.call();
             } finally {
@@ -199,14 +199,14 @@ abstract class AbstractStripedLock implements Lock {
 
     @Override
     public void lock(Object resource) {
-        lock(resource, defaultLockTimeSec);
+        lock(resource, defaultTimeout);
     }
 
     @Override
-    public void lock(Object resource, int lockTimeSec) {
+    public void lock(Object resource, Duration timeout) {
 
         try {
-            tryToLock(resource, lockTimeSec);
+            tryToLock(resource, timeout);
         } catch (InterruptedException e) {
             handleInterruptException(e);
         }
@@ -214,14 +214,14 @@ abstract class AbstractStripedLock implements Lock {
 
     @Override
     public void lock(Collection<?> resources) {
-        lock(resources, defaultLockTimeSec);
+        lock(resources, defaultTimeout);
     }
 
     @Override
-    public void lock(Collection<?> resources, int lockTimeSec) {
+    public void lock(Collection<?> resources, Duration timeout) {
 
         try {
-            lockInterruptibly(resources, lockTimeSec);
+            lockInterruptibly(resources, timeout);
         } catch (InterruptedException e) {
             handleInterruptException(e);
         }
@@ -229,27 +229,27 @@ abstract class AbstractStripedLock implements Lock {
 
     @Override
     public void lockInterruptibly(Object resource) throws InterruptedException {
-        lockInterruptibly(resource, defaultLockTimeSec);
+        lockInterruptibly(resource, defaultTimeout);
     }
 
     @Override
-    public void lockInterruptibly(Object resource, int lockTimeSec) throws InterruptedException {
-        tryToLock(resource, lockTimeSec);
+    public void lockInterruptibly(Object resource, Duration timeout) throws InterruptedException {
+        tryToLock(resource, timeout);
     }
 
     @Override
     public void lockInterruptibly(Collection<?> resources) throws InterruptedException {
-        lockInterruptibly(resources, defaultLockTimeSec);
+        lockInterruptibly(resources, defaultTimeout);
     }
 
     @Override
-    public void lockInterruptibly(Collection<?> resources, int lockTimeSec) throws InterruptedException {
+    public void lockInterruptibly(Collection<?> resources, Duration timeout) throws InterruptedException {
         requireNonNull(resources, "Parameter [resources] must not be null");
-        Preconditions.checkArgument(lockTimeSec > 0, "Parameter [lockTimeSec] must be positive. Current value: [%s]", lockTimeSec);
+        validateTimeout(timeout);
 
         if (resources.stream().allMatch(Objects::nonNull)) {
             for (Object resource : resources) {
-                tryToLock(resource, lockTimeSec);
+                tryToLock(resource, timeout);
             }
         } else {
             throw new IllegalArgumentException("Unable to initiate lock on null object.  resources: " + resources);
@@ -277,11 +277,10 @@ abstract class AbstractStripedLock implements Lock {
         }
     }
 
-    private void tryToLock(Object resource, int lockTimeSec, Consumer<Object> resourceConsumer) throws InterruptedException {
-        Preconditions.checkArgument(lockTimeSec > 0, "Parameter [lockTimeSec] must be positive. Current value: [%s]", lockTimeSec);
+    private void tryToLock(Object resource, Duration timeout, Consumer<Object> resourceConsumer) throws InterruptedException {
         requireNonNull(resource, "Parameter [resource] must not be null");
-
-        if (striped.get(resource).tryLock(lockTimeSec, TimeUnit.SECONDS)) {
+        validateTimeout(timeout);
+        if (striped.get(resource).tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
 
             if (resourceConsumer != null) {
                 resourceConsumer.accept(resource);
@@ -289,12 +288,12 @@ abstract class AbstractStripedLock implements Lock {
 
             LOGGER.trace("The resource: [{}] has been locked", resource);
         } else {
-            throw new LockAcquireException("Unable to acquire lock within [" + lockTimeSec + "] seconds for [" + resource + ']', resource, lockTimeSec);
+            throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] seconds for [" + resource + ']', resource, timeout);
         }
     }
 
-    private void tryToLock(Object resource, int lockTimeSec) throws InterruptedException {
-        tryToLock(resource, lockTimeSec, null);
+    private void tryToLock(Object resource, Duration timeout) throws InterruptedException {
+        tryToLock(resource, timeout, null);
     }
 
     private void handleInterruptException(InterruptedException e) {
@@ -304,5 +303,9 @@ abstract class AbstractStripedLock implements Lock {
     private IllegalStateException interruptAndResolveException(InterruptedException e) {
         Thread.currentThread().interrupt();
         return new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
+    }
+
+    private void validateTimeout(Duration timeout) {
+        Preconditions.checkArgument(!timeout.isNegative() && !timeout.isZero(), "Parameter [timeout] must be positive. Current value: [%s]", timeout);
     }
 }
