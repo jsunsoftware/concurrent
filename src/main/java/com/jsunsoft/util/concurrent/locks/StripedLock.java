@@ -350,7 +350,7 @@ public interface StripedLock {
      * @param type           type of striped lock
      * @param stripes        Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
      * @param defaultTimeout the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @return Lock instance
+     * @return StripedLock instance
      */
     static StripedLock of(StripedLockType type, int stripes, Duration defaultTimeout) {
         Objects.requireNonNull(type, "parameter 'type' may not be null");
@@ -372,6 +372,9 @@ public interface StripedLock {
     /**
      * Creates and returns a StripedLock according to the {@code StripedLockType.LOCK} type.
      *
+     * @param stripes        Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
+     * @param defaultTimeout the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @return StripedLock instance
      * @see #of(StripedLockType, int, Duration)
      */
     static StripedLock of(int stripes, Duration defaultTimeout) {
