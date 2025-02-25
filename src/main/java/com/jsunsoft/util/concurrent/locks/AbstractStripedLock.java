@@ -16,7 +16,6 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Striped;
 import com.jsunsoft.util.Closure;
 import com.jsunsoft.util.Executable;
@@ -288,7 +287,7 @@ abstract class AbstractStripedLock implements StripedLock {
 
             LOGGER.trace("The resource: [{}] has been locked", resource);
         } else {
-            throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] seconds for [" + resource + ']', resource, timeout);
+            throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resource [" + resource + ']', resource, timeout);
         }
     }
 
@@ -306,6 +305,6 @@ abstract class AbstractStripedLock implements StripedLock {
     }
 
     private void validateTimeout(Duration timeout) {
-        Preconditions.checkArgument(!timeout.isNegative() && !timeout.isZero(), "Parameter [timeout] must be positive. Current value: [%s]", timeout);
+        //noinspection ConstantConditions
     }
 }
