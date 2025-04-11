@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
-public abstract class AbstractStripedLock extends AbstractResourceLock implements StripedLock {
+abstract class AbstractStripedLock extends AbstractResourceLock implements StripedLock {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractStripedLock.class);
 
     private final Striped<Lock> striped;
