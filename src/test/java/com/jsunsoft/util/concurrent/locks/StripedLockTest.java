@@ -16,6 +16,8 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
+import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
+import com.jsunsoft.util.concurrent.locks.striped.StripedLockType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +33,7 @@ class StripedLockTest {
 
     @Test
     void test() throws InterruptedException {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT30);
 
         Res res = new Res();
 
@@ -42,6 +44,7 @@ class StripedLockTest {
                                 try {
                                     Thread.sleep(1000); //for demonstrate that threads can enter here if lock not acquired
                                 } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
                                     e.printStackTrace();
                                 }
                                 res.version++;
@@ -62,7 +65,7 @@ class StripedLockTest {
 
     @Test
     void lockSingleResource() throws InterruptedException {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res = new Res();
 
         lock.lock(res.id, () -> res.version++);
@@ -72,7 +75,7 @@ class StripedLockTest {
 
     @Test
     void lockMultipleResources() throws InterruptedException {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res1 = new Res();
         Res res2 = new Res();
 
@@ -87,7 +90,7 @@ class StripedLockTest {
 
     @Test
     void lockWithTimeout() throws InterruptedException {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT1);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT1);
         Res res = new Res();
 
         lock.lock(res.id, TIMEOUT1, () -> res.version++);
@@ -97,13 +100,14 @@ class StripedLockTest {
 
     @Test
     void lockInterruptibly() throws InterruptedException {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res = new Res();
 
         Thread thread = new Thread(() -> {
             try {
                 lock.lockInterruptibly(res.id, () -> res.version++);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 e.printStackTrace();
             }
         });
@@ -116,13 +120,14 @@ class StripedLockTest {
 
     @Test
     void lockInterruptiblyWithTimeout() throws InterruptedException {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT1);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT1);
         Res res = new Res();
 
         Thread thread = new Thread(() -> {
             try {
                 lock.lockInterruptibly(res.id, TIMEOUT1, () -> res.version++);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 e.printStackTrace();
             }
         });
@@ -135,7 +140,7 @@ class StripedLockTest {
 
     @Test
     void unlockSingleResource() {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res = new Res();
 
         lock.lock(res.id);
@@ -146,7 +151,7 @@ class StripedLockTest {
 
     @Test
     void unlockMultipleResources() {
-        StripedLock lock = StripedLock.of(StripedLockType.LOCK, 5, TIMEOUT30);
+        ResourceLock lock = StripedLockFactory.of(StripedLockType.LOCK, 5, TIMEOUT30);
         Res res1 = new Res();
         Res res2 = new Res();
 

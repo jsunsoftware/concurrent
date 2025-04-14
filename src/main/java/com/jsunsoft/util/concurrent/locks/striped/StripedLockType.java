@@ -1,4 +1,4 @@
-package com.jsunsoft.util.concurrent.locks;
+package com.jsunsoft.util.concurrent.locks.striped;
 
 /*
  * Copyright 2017 Benik Arakelyan
