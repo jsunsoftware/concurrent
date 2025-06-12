@@ -48,7 +48,7 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
 
         striped.get(resource).unlock();
 
-        LOGGER.trace("The resource [{}] has been unlocked", resource);
+        LOGGER.trace("The resource: [{}] has been unlocked", resource);
     }
 
     @Override
