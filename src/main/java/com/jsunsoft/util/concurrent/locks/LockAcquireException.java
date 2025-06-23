@@ -17,22 +17,28 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.Collections;
 
 public class LockAcquireException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    private final Object resource;
+    private final Collection<Object> resources;
     private final Duration timeout;
 
     LockAcquireException(String message, Object resource, Duration timeout) {
+        this(message, resource == null ? null : Collections.singleton(resource), timeout);
+    }
+
+    LockAcquireException(String message, Collection<Object> resources, Duration timeout) {
         super(message);
-        this.resource = resource;
+        this.resources = resources;
         this.timeout = timeout;
     }
 
-    public Object getResource() {
-        return resource;
+    public Collection<Object> getResource() {
+        return resources;
     }
 
     public Duration getTimeout() {

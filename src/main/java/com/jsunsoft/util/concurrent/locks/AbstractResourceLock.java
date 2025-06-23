@@ -19,11 +19,8 @@ import com.jsunsoft.util.Closure;
 import com.jsunsoft.util.Executable;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -122,19 +119,28 @@ abstract class AbstractResourceLock implements ResourceLock {
         requireNonNull(callback, "Parameter [callback] must not be null");
 
         R result;
-        boolean unlock = true;
+
+        RuntimeException exceptionDuringUnlock = null;
+
+        boolean acquired = false;
 
         try {
             tryToLock(resource, timeout);
-            result = callback.call();
-        } catch (LockAcquireException e) {
-            unlock = false;
+            acquired = true;
 
-            throw e;
+            result = callback.call();
         } finally {
-            if (unlock) {
-                unlock(resource);
+            if (acquired) {
+                try {
+                    unlock(resource);
+                } catch (RuntimeException e) {
+                    exceptionDuringUnlock = e;
+                }
             }
+        }
+
+        if (exceptionDuringUnlock != null) {
+            throw exceptionDuringUnlock;
         }
 
         return result;
@@ -158,32 +164,6 @@ abstract class AbstractResourceLock implements ResourceLock {
             executable.execute();
             return null;
         });
-    }
-
-    @Override
-    public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws InterruptedException, X {
-        requireNonNull(resources, "Parameter [resources] must not be null");
-        requireNonNull(callback, "parameter 'callback' must not be null");
-        validateTimeout(timeout);
-        R result;
-
-        if (resources.stream().allMatch(Objects::nonNull)) {
-            List<Object> lockedResources = new ArrayList<>(resources.size());
-            Consumer<Object> resourceConsumer = lockedResources::add;
-
-            try {
-                for (Object resource : resources) {
-                    tryToLock(resource, timeout, resourceConsumer);
-                }
-                result = callback.call();
-            } finally {
-                unlock(lockedResources);
-            }
-        } else {
-            throw new IllegalArgumentException("Unable to initiate lock on null object.  resources: " + resources);
-        }
-
-        return result;
     }
 
     @Override
@@ -232,20 +212,6 @@ abstract class AbstractResourceLock implements ResourceLock {
     }
 
     @Override
-    public void lockInterruptibly(Collection<?> resources, Duration timeout) throws InterruptedException {
-        requireNonNull(resources, "Parameter [resources] must not be null");
-        validateTimeout(timeout);
-
-        if (resources.stream().allMatch(Objects::nonNull)) {
-            for (Object resource : resources) {
-                tryToLock(resource, timeout);
-            }
-        } else {
-            throw new IllegalArgumentException("Unable to initiate lock on null object.  resources: " + resources);
-        }
-    }
-
-    @Override
     public void unlock(Collection<?> resources) {
         requireNonNull(resources, "Parameter [resources] must not be null");
 
@@ -257,14 +223,10 @@ abstract class AbstractResourceLock implements ResourceLock {
         }
     }
 
-    protected abstract void tryToLock(Object resource, Duration timeout, Consumer<Object> resourceConsumer) throws InterruptedException;
+    protected abstract void tryToLock(Object resource, Duration timeout) throws InterruptedException;
 
     protected final Duration getDefaultTimeout() {
         return defaultTimeout;
-    }
-
-    protected void tryToLock(Object resource, Duration timeout) throws InterruptedException {
-        tryToLock(resource, timeout, null);
     }
 
     protected void handleInterruptException(InterruptedException e) {
