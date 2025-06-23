@@ -220,7 +220,7 @@ public interface ResourceLock {
 
     /**
      * Difference between the {@link #lock(Collection, Closure)} that this method throws InterruptedException when thread is interrupted.
-     * Uses the default {@code timeout}.
+     * Uses the default {@code timeout} as maximum time to wait for each resource lock. Worst case is (n × timeout) See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}.
      *
      * @param resources collection of resources to lock
      * @param callback  Callback which execution will be synchronized by resources.
@@ -252,7 +252,7 @@ public interface ResourceLock {
      * Difference between the {@link #lock(Collection, Closure)} that this method throws InterruptedException when thread is interrupted.
      *
      * @param resources collection of resources to lock
-     * @param timeout   the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param timeout   the maximum time to wait for each resource lock. Worst case is (n × timeout) See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @param callback  Callback which execution will be synchronized by resources.
      *                  The execute method will be called in synchronized block
      * @param <R>       Return type of the callback.
