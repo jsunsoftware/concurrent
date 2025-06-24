@@ -125,12 +125,15 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
     }
 
     @Override
-    protected void tryToLock(Object resource, Duration timeout) throws InterruptedException {
+    protected Lock tryToLock(Object resource, Duration timeout) throws InterruptedException {
         requireNonNull(resource, "Parameter [resource] must not be null");
         validateTimeout(timeout);
-        if (striped.get(resource).tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
 
-            LOGGER.trace("The resource: [{}] has been locked", resource);
+        Lock lock = striped.get(resource);
+
+        if (lock.tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
+
+            return lock;
         } else {
             throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resource [" + resource + ']', resource, timeout);
         }

@@ -17,14 +17,19 @@ package com.jsunsoft.util.concurrent.locks;
 
 import com.jsunsoft.util.Closure;
 import com.jsunsoft.util.Executable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.concurrent.locks.Lock;
 
 import static java.util.Objects.requireNonNull;
 
 abstract class AbstractResourceLock implements ResourceLock {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractResourceLock.class);
 
     private final Duration defaultTimeout;
 
@@ -122,17 +127,21 @@ abstract class AbstractResourceLock implements ResourceLock {
 
         RuntimeException exceptionDuringUnlock = null;
 
-        boolean acquired = false;
+        Lock lock = null;
 
         try {
-            tryToLock(resource, timeout);
-            acquired = true;
+            lock = tryToLock(resource, timeout);
+
+            logLockedResource(resource);
 
             result = callback.call();
         } finally {
-            if (acquired) {
+            if (lock != null) {
                 try {
-                    unlock(resource);
+                    lock.unlock();
+
+                    LOGGER.trace("The resource: [{}] has been unlocked", resource);
+
                 } catch (RuntimeException e) {
                     exceptionDuringUnlock = e;
                 }
@@ -176,6 +185,9 @@ abstract class AbstractResourceLock implements ResourceLock {
 
         try {
             tryToLock(resource, timeout);
+
+            logLockedResource(resource);
+
         } catch (InterruptedException e) {
             handleInterruptException(e);
         }
@@ -204,6 +216,8 @@ abstract class AbstractResourceLock implements ResourceLock {
     @Override
     public void lockInterruptibly(Object resource, Duration timeout) throws InterruptedException {
         tryToLock(resource, timeout);
+
+        logLockedResource(resource);
     }
 
     @Override
@@ -223,7 +237,11 @@ abstract class AbstractResourceLock implements ResourceLock {
         }
     }
 
-    protected abstract void tryToLock(Object resource, Duration timeout) throws InterruptedException;
+    protected abstract Lock tryToLock(Object resource, Duration timeout) throws InterruptedException;
+
+    protected void logLockedResource(Object resource) {
+        LOGGER.trace("The resource: [{}] has been locked", resource);
+    }
 
     protected final Duration getDefaultTimeout() {
         return defaultTimeout;
