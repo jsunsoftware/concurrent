@@ -17,6 +17,7 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Striped;
 import com.jsunsoft.util.Closure;
 import org.slf4j.Logger;
@@ -59,7 +60,7 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
         try {
             for (Lock lock : locks) {
 
-                if (lock.tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
+                if (tryLock(lock, timeout)) {
                     acquiredLocks.add(lock);
                 } else {
                     throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resources: " + resources, resources, timeout);
@@ -93,7 +94,7 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
         try {
             for (Lock lock : locks) {
 
-                if (lock.tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
+                if (tryLock(lock, timeout)) {
                     acquiredLocks.add(lock);
                 } else {
                     throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resources: " + resources, resources, timeout);
@@ -121,22 +122,19 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
 
         striped.get(resource).unlock();
 
-        LOGGER.trace("The resource: [{}] has been unlocked", resource);
+        logUnlockResource(resource);
     }
 
     @Override
-    protected Lock tryToLock(Object resource, Duration timeout) throws InterruptedException {
-        requireNonNull(resource, "Parameter [resource] must not be null");
+    protected boolean tryLock(Object resource, Duration timeout) throws InterruptedException {
+
+        return tryLock(striped.get(resource), timeout);
+    }
+
+    protected boolean tryLock(Lock lock, Duration timeout) throws InterruptedException {
         validateTimeout(timeout);
 
-        Lock lock = striped.get(resource);
-
-        if (lock.tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
-
-            return lock;
-        } else {
-            throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resource [" + resource + ']', resource, timeout);
-        }
+        return lock.tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS);
     }
 
     protected final Striped<Lock> getStriped() {
@@ -146,9 +144,9 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
     private RuntimeException unlockAll(List<Lock> locks, Collection<?> resources) {
         RuntimeException firstExceptionDuringUnlock = null;
 
-        for (int i = locks.size() - 1; i >= 0; i--) {
+        for (Lock lock : Lists.reverse(locks)) {
             try {
-                locks.get(i).unlock();
+                lock.unlock();
             } catch (RuntimeException e) {
                 LOGGER.error("Failed to unlock resources: {}", resources, e);
                 if (firstExceptionDuringUnlock == null) {

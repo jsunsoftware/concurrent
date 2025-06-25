@@ -15,15 +15,18 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jsunsoft.util.Closure;
 import com.jsunsoft.util.Executable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.locks.Lock;
 
 import static java.util.Objects.requireNonNull;
 
@@ -127,21 +130,19 @@ abstract class AbstractResourceLock implements ResourceLock {
 
         RuntimeException exceptionDuringUnlock = null;
 
-        Lock lock = null;
+        boolean acquired = false;
 
         try {
-            lock = tryToLock(resource, timeout);
+            lockInterruptibly(resource, timeout);
+            acquired = true;
 
             logLockedResource(resource);
 
             result = callback.call();
         } finally {
-            if (lock != null) {
+            if (acquired) {
                 try {
-                    lock.unlock();
-
-                    LOGGER.trace("The resource: [{}] has been unlocked", resource);
-
+                    unlock(resource);
                 } catch (RuntimeException e) {
                     exceptionDuringUnlock = e;
                 }
@@ -176,6 +177,43 @@ abstract class AbstractResourceLock implements ResourceLock {
     }
 
     @Override
+    public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws InterruptedException, X {
+        requireNonNull(resources, "Parameter [resources] must not be null");
+        requireNonNull(callback, "parameter 'callback' must not be null");
+        Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
+        validateTimeout(timeout);
+        R result;
+
+        List<Object> lockedResources = new ArrayList<>(resources.size());
+
+        RuntimeException unlockFirstException = null;
+
+        boolean acquired = false;
+
+        try {
+            lockInterruptibly(resources, timeout);
+
+            acquired = true;
+
+            result = callback.call();
+        } finally {
+            if (acquired) {
+                try {
+                    unlock(lockedResources);
+                } catch (RuntimeException e) {
+                    unlockFirstException = e;
+                }
+            }
+        }
+
+        if (unlockFirstException != null) {
+            throw unlockFirstException;
+        }
+
+        return result;
+    }
+
+    @Override
     public void lock(Object resource) {
         lock(resource, defaultTimeout);
     }
@@ -184,7 +222,7 @@ abstract class AbstractResourceLock implements ResourceLock {
     public void lock(Object resource, Duration timeout) {
 
         try {
-            tryToLock(resource, timeout);
+            lockInterruptibly(resource, timeout);
 
             logLockedResource(resource);
 
@@ -215,9 +253,12 @@ abstract class AbstractResourceLock implements ResourceLock {
 
     @Override
     public void lockInterruptibly(Object resource, Duration timeout) throws InterruptedException {
-        tryToLock(resource, timeout);
+        requireNonNull(resource, "Parameter [resource] must not be null");
+        validateTimeout(timeout);
 
-        logLockedResource(resource);
+        if (!tryLock(resource, timeout)) {
+            throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resource [" + resource + ']', resource, timeout);
+        }
     }
 
     @Override
@@ -226,21 +267,74 @@ abstract class AbstractResourceLock implements ResourceLock {
     }
 
     @Override
+    public void lockInterruptibly(Collection<?> resources, Duration timeout) throws InterruptedException {
+        requireNonNull(resources, "Parameter [resources] must not be null");
+        Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
+        validateTimeout(timeout);
+
+        List<Object> lockAcquiredResources = new ArrayList<>(resources.size());
+
+        try {
+
+            for (Object resource : resources) {
+                lockInterruptibly(resource, timeout);
+                lockAcquiredResources.add(resource);
+                logLockedResource(resource);
+            }
+        } catch (Exception e) {
+            try {
+                unlock(lockAcquiredResources);
+            } catch (RuntimeException ue) {
+                // Suppress the exception during unlock rethrow the original exception
+                LOGGER.error("Failed to unlock resources after an exception during locking: {}", lockAcquiredResources, ue);
+            }
+
+            throw e;
+        }
+    }
+
+    @Override
     public void unlock(Collection<?> resources) {
         requireNonNull(resources, "Parameter [resources] must not be null");
 
         if (!resources.isEmpty()) {
-            resources
-                    .stream()
-                    .filter(Objects::nonNull)
-                    .forEach(this::unlock);
+
+            RuntimeException firstExceptionDuringUnlock = null;
+
+            Collection<?> reversedResources;
+
+            if (resources instanceof List) {
+
+                reversedResources = Lists.reverse((List<?>) resources);
+            } else {
+                reversedResources = Lists.reverse(new ArrayList<>(resources));
+            }
+
+            for (Object resource : reversedResources) {
+                try {
+                    unlock(resource);
+                } catch (RuntimeException e) {
+                    LOGGER.error("Failed to unlock resource: {}", resource, e);
+                    if (firstExceptionDuringUnlock == null) {
+                        firstExceptionDuringUnlock = e;
+                    }
+                }
+            }
+
+            if (firstExceptionDuringUnlock != null) {
+                throw firstExceptionDuringUnlock;
+            }
         }
     }
 
-    protected abstract Lock tryToLock(Object resource, Duration timeout) throws InterruptedException;
+    protected abstract boolean tryLock(Object resource, Duration timeout) throws InterruptedException;
 
     protected void logLockedResource(Object resource) {
         LOGGER.trace("The resource: [{}] has been locked", resource);
+    }
+
+    protected void logUnlockResource(Object resource) {
+        LOGGER.trace("The resource: [{}] has been unlocked", resource);
     }
 
     protected final Duration getDefaultTimeout() {
