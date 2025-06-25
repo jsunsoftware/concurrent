@@ -78,6 +78,6 @@ For difference between StripedLockType.LOCK and StripedLockType.LAZY_WEAK_LOCK y
 <dependency>
     <groupId>com.jsunsoft.util</groupId>
     <artifactId>concurrent</artifactId>
-    <version>2.0.3</version>
+    <version>2.0.5</version>
 </dependency>
 ```
