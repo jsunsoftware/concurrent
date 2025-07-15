@@ -30,7 +30,7 @@ import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractResourceLock implements ResourceLock {
+public abstract class AbstractResourceLock implements ResourceLock {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractResourceLock.class);
 
