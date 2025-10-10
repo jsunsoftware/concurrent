@@ -136,8 +136,6 @@ public abstract class AbstractResourceLock implements ResourceLock {
             lockInterruptibly(resource, timeout);
             acquired = true;
 
-            logLockedResource(resource);
-
             result = callback.call();
         } finally {
             if (acquired) {
@@ -224,8 +222,6 @@ public abstract class AbstractResourceLock implements ResourceLock {
         try {
             lockInterruptibly(resource, timeout);
 
-            logLockedResource(resource);
-
         } catch (InterruptedException e) {
             handleInterruptException(e);
         }
@@ -256,7 +252,11 @@ public abstract class AbstractResourceLock implements ResourceLock {
         requireNonNull(resource, "Parameter [resource] must not be null");
         validateTimeout(timeout);
 
-        if (!tryLock(resource, timeout)) {
+        LOGGER.trace("Trying to acquire lock for resource: [{}] with timeout: [{}]", resource, timeout);
+
+        if (tryLock(resource, timeout)) {
+            logLockedResource(resource);
+        } else {
             throw new LockAcquireException("Unable to acquire lock within [" + timeout + "] for resource [" + resource + ']', resource, timeout);
         }
     }
@@ -279,7 +279,6 @@ public abstract class AbstractResourceLock implements ResourceLock {
             for (Object resource : resources) {
                 lockInterruptibly(resource, timeout);
                 lockAcquiredResources.add(resource);
-                logLockedResource(resource);
             }
         } catch (Exception e) {
             try {
@@ -330,11 +329,11 @@ public abstract class AbstractResourceLock implements ResourceLock {
     protected abstract boolean tryLock(Object resource, Duration timeout) throws InterruptedException;
 
     protected void logLockedResource(Object resource) {
-        LOGGER.trace("The resource: [{}] has been locked", resource);
+        LOGGER.debug("The resource: [{}] has been locked", resource);
     }
 
     protected void logUnlockResource(Object resource) {
-        LOGGER.trace("The resource: [{}] has been unlocked", resource);
+        LOGGER.debug("The resource: [{}] has been unlocked", resource);
     }
 
     protected final Duration getDefaultTimeout() {

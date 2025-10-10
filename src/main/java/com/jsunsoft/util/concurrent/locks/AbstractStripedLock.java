@@ -101,7 +101,7 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
                 }
             }
 
-            LOGGER.trace("The resources: {} have been locked.", resources);
+            LOGGER.debug("The resources: {} have been locked.", resources);
 
             result = callback.call();
         } finally {
@@ -154,6 +154,8 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
                 }
             }
         }
+
+        LOGGER.debug("The resources: {} have been unlocked.", resources);
 
         return firstExceptionDuringUnlock;
     }
