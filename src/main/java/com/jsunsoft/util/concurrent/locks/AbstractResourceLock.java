@@ -182,7 +182,8 @@ public abstract class AbstractResourceLock implements ResourceLock {
         validateTimeout(timeout);
         R result;
 
-        List<Object> lockedResources = new ArrayList<>(resources.size());
+        // Note: the actual acquisition is performed by lockInterruptibly(resources, timeout)
+        // below; we will unlock the same 'resources' collection in finally.
 
         RuntimeException unlockFirstException = null;
 
@@ -197,7 +198,8 @@ public abstract class AbstractResourceLock implements ResourceLock {
         } finally {
             if (acquired) {
                 try {
-                    unlock(lockedResources);
+                    // Unlock the same resources we locked above (in reverse order internally)
+                    unlock(resources);
                 } catch (RuntimeException e) {
                     unlockFirstException = e;
                 }
@@ -350,6 +352,6 @@ public abstract class AbstractResourceLock implements ResourceLock {
     }
 
     protected void validateTimeout(Duration timeout) {
-        //noinspection ConstantConditions
+        Preconditions.checkNotNull(timeout, "Parameter [timeout] must not be null");
     }
 }
