@@ -108,6 +108,17 @@ lock(ImmutableList.of("taskA", "taskB"), ()->{
 All `lock*` methods also have overloads returning a value via a callback, and overloads that accept a
 `Duration timeout`.
 
+## Important semantics / gotchas
+
+- **Striped semantics**: this library uses Guava `Striped`. It is *not* one-lock-per-key: different keys may map to the
+  same stripe.
+  This means “different keys run in parallel” is best-effort and depends on stripe count and key distribution.
+- **Key stability requirement**: keys must have stable `hashCode()` / `equals()` while a lock is held. Avoid mutable
+  objects (and arrays) as keys.
+- **Timeout for multiple keys is per-lock**: for collection-based methods, the timeout is applied to **each** individual
+  lock acquisition.
+  Worst-case wait time can be `N × timeout`.
+
 ## Choosing striped lock type
 
 You can choose between eager and lazy-weak stripes via `StripedLockType`:
@@ -146,7 +157,7 @@ If you still need it for migration purposes:
 ```java
 import com.jsunsoft.util.concurrent.locks.StripedLock; // Deprecated
 
-StripedLock legacy = StripedLock.of(8, Duration.ofSeconds(30));
+ResourceLock legacy = StripedLockFactory.of(8, Duration.ofSeconds(30));
 legacy.
 
 lock("key",() ->{ /* ... */ });

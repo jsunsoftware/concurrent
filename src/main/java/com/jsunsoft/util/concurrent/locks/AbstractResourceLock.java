@@ -126,32 +126,9 @@ public abstract class AbstractResourceLock implements ResourceLock {
 
         requireNonNull(callback, "Parameter [callback] must not be null");
 
-        R result;
+        lockInterruptibly(resource, timeout);
 
-        RuntimeException exceptionDuringUnlock = null;
-
-        boolean acquired = false;
-
-        try {
-            lockInterruptibly(resource, timeout);
-            acquired = true;
-
-            result = callback.call();
-        } finally {
-            if (acquired) {
-                try {
-                    unlock(resource);
-                } catch (RuntimeException e) {
-                    exceptionDuringUnlock = e;
-                }
-            }
-        }
-
-        if (exceptionDuringUnlock != null) {
-            throw exceptionDuringUnlock;
-        }
-
-        return result;
+        return callWithUnlock(callback, () -> unlock(resource));
     }
 
     @Override
@@ -180,34 +157,47 @@ public abstract class AbstractResourceLock implements ResourceLock {
         requireNonNull(callback, "parameter 'callback' must not be null");
         Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
         validateTimeout(timeout);
+
+        lockInterruptibly(resources, timeout);
+
+        // Unlock the same resources we locked above (in reverse order internally)
+        return callWithUnlock(callback, () -> unlock(resources));
+    }
+
+    /**
+     * Executes the callback and always executes the provided unlock action.
+     *
+     * <p>If the callback throws an {@link Exception} and unlock fails, the unlock exception is added as a suppressed
+     * exception to the primary exception. If the callback completes successfully and unlock fails, the unlock exception
+     * is thrown.</p>
+     *
+     * <p>Note: this method intentionally catches {@link Exception} (not {@link Throwable}) and does not throw from the
+     * {@code finally} block.</p>
+     */
+    protected final <R, X extends Throwable> R callWithUnlock(Closure<R, X> callback, Runnable unlockAction) throws X {
+        Exception primaryException = null;
+        RuntimeException exceptionDuringUnlock = null;
+
         R result;
-
-        // Note: the actual acquisition is performed by lockInterruptibly(resources, timeout)
-        // below; we will unlock the same 'resources' collection in finally.
-
-        RuntimeException unlockFirstException = null;
-
-        boolean acquired = false;
-
         try {
-            lockInterruptibly(resources, timeout);
-
-            acquired = true;
-
             result = callback.call();
+        } catch (Exception e) {
+            primaryException = e;
+            throw e;
         } finally {
-            if (acquired) {
-                try {
-                    // Unlock the same resources we locked above (in reverse order internally)
-                    unlock(resources);
-                } catch (RuntimeException e) {
-                    unlockFirstException = e;
+            try {
+                unlockAction.run();
+            } catch (RuntimeException unlockException) {
+                if (primaryException != null) {
+                    primaryException.addSuppressed(unlockException);
+                } else {
+                    exceptionDuringUnlock = unlockException;
                 }
             }
         }
 
-        if (unlockFirstException != null) {
-            throw unlockFirstException;
+        if (exceptionDuringUnlock != null) {
+            throw exceptionDuringUnlock;
         }
 
         return result;
@@ -330,10 +320,20 @@ public abstract class AbstractResourceLock implements ResourceLock {
 
     protected abstract boolean tryLock(Object resource, Duration timeout) throws InterruptedException;
 
+    /**
+     * Logs that the given resource has been locked.
+     *
+     * <p>Non-public hook for subclasses to customize logging behavior.</p>
+     */
     protected void logLockedResource(Object resource) {
         LOGGER.debug("The resource: [{}] has been locked", resource);
     }
 
+    /**
+     * Logs that the given resource has been unlocked.
+     *
+     * <p>Non-public hook for subclasses to customize logging behavior.</p>
+     */
     protected void logUnlockResource(Object resource) {
         LOGGER.debug("The resource: [{}] has been unlocked", resource);
     }
@@ -346,12 +346,22 @@ public abstract class AbstractResourceLock implements ResourceLock {
         throw interruptAndResolveException(e);
     }
 
+    /**
+     * Marks the current thread as interrupted and returns an {@link IllegalStateException} suitable for non-interruptible
+     * API variants that do not declare {@link InterruptedException}.
+     */
     protected IllegalStateException interruptAndResolveException(InterruptedException e) {
         Thread.currentThread().interrupt();
         return new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
     }
 
+    /**
+     * Validates the timeout argument.
+     *
+     * <p>Timeouts must be non-null and non-negative.</p>
+     */
     protected void validateTimeout(Duration timeout) {
         Preconditions.checkNotNull(timeout, "Parameter [timeout] must not be null");
+        Preconditions.checkArgument(!timeout.isNegative(), "Parameter [timeout] must not be negative");
     }
 }

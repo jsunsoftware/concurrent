@@ -24,6 +24,19 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Interface representing a lock mechanism that can be used to synchronize the execution of code blocks.
+ *
+ * <p><b>Important notes</b></p>
+ * <ul>
+ *   <li><b>Key stability</b>: {@code resource} keys must have a stable {@link Object#hashCode()} / {@link Object#equals(Object)}
+ *   while the lock is held. Using mutable objects (or arrays) as keys can lead to failed unlocks and leaked locks.</li>
+ *   <li><b>Striped locks semantics</b>: implementations based on Guava {@code Striped} provide <i>striped</i> locking, not
+ *   one-lock-per-key. Different keys may map to the same stripe, so parallelism is best-effort.</li>
+ *   <li><b>Multi-key deadlock avoidance</b>: if a {@code ResourceLock} implementation acquires multiple locks in the
+ *   caller-provided iteration order, callers must provide the resources in a <i>consistent global order</i> across all
+ *   threads to avoid deadlocks. The striped implementation provided by this library handles ordering internally.</li>
+ *   <li><b>Timeout for collections</b>: collection-based methods apply the timeout <i>per lock acquisition</i>. Worst case
+ *   waiting time can be {@code resources.size() × timeout}.</li>
+ * </ul>
  */
 public interface ResourceLock {
 
@@ -37,6 +50,7 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      * @see #lock(Object, Duration, Executable)
      */
     <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X;
@@ -53,6 +67,7 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, Closure)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <R, X extends Throwable> R lock(Object resource, Closure<R, X> callback) throws X;
 
@@ -65,6 +80,7 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <X extends Throwable> void lock(Object resource, Duration timeout, Executable<X> executable) throws X;
 
@@ -79,6 +95,7 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Object, Closure)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <R, X extends Throwable> R lock(Object resource, Duration timeout, Closure<R, X> callback) throws X;
 
@@ -92,6 +109,7 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      * @see #lock(Collection, Duration, Executable)
      */
     <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X;
@@ -108,24 +126,28 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, Closure)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <R, X extends Throwable> R lock(Collection<?> resources, Closure<R, X> callback) throws X;
 
     /**
      * @param resources  collection of resources to lock
-     * @param timeout    the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param timeout    the maximum time to wait for <b>each</b> lock. Worst case total wait is {@code resources.size() × timeout}.
+     *                   See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @param executable Mainly lambda expression which execution will be synchronized by resources.
      *                   The execute method will be called in synchronized block
      * @param <X>        Custom exception type which can be thrown from method execute.
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <X extends Throwable> void lock(Collection<?> resources, Duration timeout, Executable<X> executable) throws X;
 
     /**
      * @param resources collection of resources to lock
-     * @param timeout   the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param timeout   the maximum time to wait for <b>each</b> lock. Worst case total wait is {@code resources.size() × timeout}.
+     *                  See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @param callback  Callback which execution will be synchronized by resources.
      *                  The execute method will be called in synchronized block
      * @param <R>       Return type of the callback.
@@ -134,6 +156,7 @@ public interface ResourceLock {
      * @throws X                     Custom exception which can be thrown from method execute.
      * @throws IllegalStateException If thread was interrupted.
      *                               Use the method {@link #lockInterruptibly(Collection, Closure)} if thread can be interrupted.
+     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
     <R, X extends Throwable> R lock(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws X;
 

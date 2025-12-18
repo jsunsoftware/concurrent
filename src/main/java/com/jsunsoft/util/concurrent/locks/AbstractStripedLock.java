@@ -33,6 +33,18 @@ import java.util.concurrent.locks.Lock;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Striped {@link ResourceLock} implementation backed by Guava {@link Striped}.
+ *
+ * <p>This class overrides some multi-key behavior from {@link AbstractResourceLock}:</p>
+ * <ul>
+ *   <li><b>Multi-key acquisition order</b>: uses {@link Striped#bulkGet(Iterable)} to obtain the underlying locks in a
+ *   deterministic order intended to avoid deadlocks even if callers pass keys in different orders.</li>
+ *   <li><b>Multi-key unlock</b>: unlocks based on the underlying striped locks returned by {@code bulkGet}, rather than
+ *   iterating the original key collection and calling {@code striped.get(key).unlock()} for each key.</li>
+ * </ul>
+ */
+@SuppressWarnings("deprecation")
 abstract class AbstractStripedLock extends AbstractResourceLock implements StripedLock {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractStripedLock.class);
 
@@ -47,6 +59,13 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
         this.striped = striped;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Differs from {@link AbstractResourceLock#lockInterruptibly(Collection, Duration)} by acquiring the underlying
+     * striped locks via {@link Striped#bulkGet(Iterable)} (deterministic order), which helps avoid deadlocks for reversed
+     * multi-key acquisition order.</p>
+     */
     @Override
     public void lockInterruptibly(Collection<?> resources, Duration timeout) throws InterruptedException {
         requireNonNull(resources, "Parameter [resources] must not be null");
@@ -70,30 +89,37 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
             LOGGER.trace("The resources: {} have been locked", resources);
 
         } catch (Exception e) {
+            RuntimeException unlockException = unlockAll(acquiredLocks, resources);
 
-            unlockAll(acquiredLocks, resources);
+            if (unlockException != null) {
+                e.addSuppressed(unlockException);
+            }
 
             throw e;
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Differs from {@link AbstractResourceLock#lockInterruptibly(Collection, Duration, Closure)} by acquiring the
+     * underlying striped locks via {@link Striped#bulkGet(Iterable)} (deterministic order), and by unlocking using the
+     * same acquired lock list (in reverse order).</p>
+     */
     @Override
     public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws InterruptedException, X {
         requireNonNull(resources, "Parameter [resources] must not be null");
         requireNonNull(callback, "parameter 'callback' must not be null");
         Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
         validateTimeout(timeout);
-        R result;
 
         List<Lock> acquiredLocks = new ArrayList<>(resources.size());
 
         Iterable<Lock> locks = striped.bulkGet(resources);
 
-        RuntimeException firstException;
-
+        //Acquire all locks. If acquisition fails, release what is acquired and rethrow.
         try {
             for (Lock lock : locks) {
-
                 if (tryLock(lock, timeout)) {
                     acquiredLocks.add(lock);
                 } else {
@@ -102,20 +128,30 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
             }
 
             LOGGER.debug("The resources: {} have been locked.", resources);
-
-            result = callback.call();
-        } finally {
-
-            firstException = unlockAll(acquiredLocks, resources);
+        } catch (InterruptedException | RuntimeException e) {
+            // Failed during acquisition; release what we acquired and rethrow.
+            RuntimeException unlockException = unlockAll(acquiredLocks, resources);
+            if (unlockException != null) {
+                e.addSuppressed(unlockException);
+            }
+            throw e;
         }
 
-        if (firstException != null) {
-            throw firstException;
-        }
-
-        return result;
+        // Phase 2: execute callback and always unlock exactly once.
+        return callWithUnlock(callback, () -> {
+            RuntimeException unlockException = unlockAll(acquiredLocks, resources);
+            if (unlockException != null) {
+                throw unlockException;
+            }
+        });
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note: the resource key must be stable (consistent {@code hashCode}/{@code equals}) while held. Unlocking calls
+     * {@code striped.get(resource).unlock()}.</p>
+     */
     @Override
     public void unlock(Object resource) {
         requireNonNull(resource, "Parameter [resource] must not be null");
@@ -125,26 +161,66 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
         logUnlockResource(resource);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Differs from {@link AbstractResourceLock#unlock(Collection)}: this implementation unlocks based on the
+     * underlying striped locks returned by {@link Striped#bulkGet(Iterable)}. This avoids relying on the iteration order
+     * of the provided {@link Collection} and matches the multi-key acquisition strategy used by this class.</p>
+     */
+    @Override
+    public void unlock(Collection<?> resources) {
+        requireNonNull(resources, "Parameter [resources] must not be null");
+        Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
+
+        List<Lock> locks = new ArrayList<>();
+        for (Lock lock : striped.bulkGet(resources)) {
+            locks.add(requireNonNull(lock, "Striped returned null lock"));
+        }
+
+        RuntimeException unlockException = unlockAll(locks, resources);
+        if (unlockException != null) {
+            throw unlockException;
+        }
+    }
+
     @Override
     protected boolean tryLock(Object resource, Duration timeout) throws InterruptedException {
-
+        requireNonNull(resource, "Parameter [resource] must not be null");
         return tryLock(striped.get(resource), timeout);
     }
 
     protected boolean tryLock(Lock lock, Duration timeout) throws InterruptedException {
+        requireNonNull(lock, "Parameter [lock] must not be null");
         validateTimeout(timeout);
 
         return lock.tryLock(timeout.toNanos(), TimeUnit.NANOSECONDS);
     }
 
+    /**
+     * Exposes the underlying Guava {@link Striped} instance used by this lock.
+     *
+     * <p>Intended for advanced usage and testing.</p>
+     */
     protected final Striped<Lock> getStriped() {
         return striped;
     }
 
+    /**
+     * Unlocks the acquired locks in reverse order.
+     *
+     * <p>Non-public helper used to keep multi-key unlock behavior consistent between acquisition methods and the manual
+     * {@link #unlock(Collection)} method.</p>
+     *
+     * @param locks     locks to unlock (in acquisition order)
+     * @param resources original resources collection (used only for logging)
+     * @return the first {@link RuntimeException} thrown during unlock (if any)
+     */
     private RuntimeException unlockAll(List<Lock> locks, Collection<?> resources) {
         RuntimeException firstExceptionDuringUnlock = null;
 
-        for (Lock lock : Lists.reverse(locks)) {
+        List<Lock> reversedLocks = Lists.reverse(locks);
+        for (Lock lock : reversedLocks) {
             try {
                 lock.unlock();
             } catch (RuntimeException e) {
