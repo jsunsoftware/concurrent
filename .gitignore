@@ -18,3 +18,5 @@ concurrent.ipr
 concurrent.iws
 
 .idea
+/.vscode/
+/.cursor/
