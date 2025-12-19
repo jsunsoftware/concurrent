@@ -20,15 +20,20 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 
+/**
+ * Thrown when a {@link ResourceLock} cannot be acquired within the specified timeout.
+ *
+ * <p>The exception carries the requested {@link #getTimeout()} and the {@link #getResources()} involved.</p>
+ */
 public class LockAcquireException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    private final Collection<Object> resources;
+    private final transient Collection<Object> resources;
     private final Duration timeout;
 
     LockAcquireException(String message, Object resource, Duration timeout) {
-        this(message, resource == null ? null : Collections.singleton(resource), timeout);
+        this(message, resource == null ? Collections.emptyList() : Collections.singleton(resource), timeout);
     }
 
     LockAcquireException(String message, Collection<Object> resources, Duration timeout) {
@@ -37,7 +42,7 @@ public class LockAcquireException extends RuntimeException {
         this.timeout = timeout;
     }
 
-    public Collection<Object> getResource() {
+    public Collection<Object> getResources() {
         return resources;
     }
 

@@ -36,13 +36,17 @@ import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
 
 import java.time.Duration;
 
-ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30)); // 8 stripes, 30s default timeout
+public class Example {
+  public static void main(String[] args) {
+    ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30)); // 8 stripes, 30s default timeout
 
-String key = "taskA";
+    String key = "taskA";
 
-lock.lock(key, () -> {
-        // the code which must be executed under the lock for key "taskA"
-});
+    lock.lock(key, () -> {
+      // the code which must be executed under the lock for key "taskA"
+    });
+  }
+}
 ```
 
 If your critical section needs to return a value:
@@ -53,14 +57,18 @@ import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
 
 import java.time.Duration;
 
-ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
+public class Example {
+  public static void main(String[] args) {
+    ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
 
-String key = "taskA";
+    String key = "taskA";
 
-String result = lock.lock(key, () -> {
-    // protected code
-    return "ok";
-});
+    String result = lock.lock(key, () -> {
+      // protected code
+      return "ok";
+    });
+  }
+}
 ```
 
 Note: You can throw your custom checked exception from the lambda and handle it outside of the `lock` method. The API is
@@ -72,21 +80,39 @@ If the current thread may be interrupted, use the `lockInterruptibly` methods. T
 thread is interrupted while waiting.
 
 ```java
-ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
+import com.jsunsoft.util.concurrent.locks.ResourceLock;
+import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
 
-lock.
+import java.time.Duration;
 
-lockInterruptibly("taskA",() ->{
-        // code executed under lock, can be interrupted
-});
+public class Example {
+  public static void main(String[] args) throws InterruptedException {
+    ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
+
+    lock.lockInterruptibly("taskA", () -> {
+      // code executed under lock, can be interrupted
+    });
+  }
+}
 ```
 
 Timeout-aware and interruptible variants are also available, for example:
 
 ```java
-lock.lockInterruptibly("taskA",Duration.ofSeconds(5), ()->{
-        // try to acquire within 5 seconds or throw LockAcquireException
-});
+import com.jsunsoft.util.concurrent.locks.ResourceLock;
+import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
+
+import java.time.Duration;
+
+public class Example {
+  public static void main(String[] args) throws InterruptedException {
+    ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
+
+    lock.lockInterruptibly("taskA", Duration.ofSeconds(5), () -> {
+      // try to acquire within 5 seconds or throw LockAcquireException
+    });
+  }
+}
 ```
 
 ## Lock with multiple keys
@@ -95,18 +121,35 @@ When you need to acquire multiple locks consistently (to avoid deadlocks) for a 
 
 ```java
 import com.google.common.collect.ImmutableList;
+import com.jsunsoft.util.concurrent.locks.ResourceLock;
+import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
 
-ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
+import java.time.Duration;
 
-lock.
+public class Example {
+  public static void main(String[] args) {
+    ResourceLock lock = StripedLockFactory.of(8, Duration.ofSeconds(30));
 
-lock(ImmutableList.of("taskA", "taskB"), ()->{
-        // code executed while both keys are locked in a consistent order
+    lock.lock(ImmutableList.of("taskA", "taskB"), () -> {
+      // code executed while both keys are locked in a consistent order
         });
+  }
+}
 ```
 
 All `lock*` methods also have overloads returning a value via a callback, and overloads that accept a
 `Duration timeout`.
+
+## Important semantics / gotchas
+
+- **Striped semantics**: this library uses Guava `Striped`. It is *not* one-lock-per-key: different keys may map to the
+  same stripe.
+  This means “different keys run in parallel” is best-effort and depends on stripe count and key distribution.
+- **Key stability requirement**: keys must have stable `hashCode()` / `equals()` while a lock is held. Avoid mutable
+  objects (and arrays) as keys.
+- **Timeout for multiple keys is per-lock**: for collection-based methods, the timeout is applied to **each** individual
+  lock acquisition.
+  Worst-case wait time can be `N × timeout`.
 
 ## Choosing striped lock type
 
@@ -117,7 +160,13 @@ import com.jsunsoft.util.concurrent.locks.ResourceLock;
 import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
 import com.jsunsoft.util.concurrent.locks.striped.StripedLockType;
 
-ResourceLock lock = StripedLockFactory.of(StripedLockType.LAZY_WEAK_LOCK, 8, Duration.ofSeconds(30));
+import java.time.Duration;
+
+public class Example {
+  public static void main(String[] args) {
+    ResourceLock lock = StripedLockFactory.of(StripedLockType.LAZY_WEAK_LOCK, 8, Duration.ofSeconds(30));
+  }
+}
 ```
 
 See Javadoc for the difference between `LOCK` and `LAZY_WEAK_LOCK` (mirrors Guava’s `Striped.lock` vs
@@ -145,11 +194,18 @@ If you still need it for migration purposes:
 
 ```java
 import com.jsunsoft.util.concurrent.locks.StripedLock; // Deprecated
+import com.jsunsoft.util.concurrent.locks.ResourceLock;
+import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
 
-StripedLock legacy = StripedLock.of(8, Duration.ofSeconds(30));
-legacy.
+import java.time.Duration;
 
-lock("key",() ->{ /* ... */ });
+public class Example {
+  public static void main(String[] args) {
+    ResourceLock legacy = StripedLockFactory.of(8, Duration.ofSeconds(30));
+
+    legacy.lock("key", () -> { /* ... */ });
+  }
+}
 ```
 
 ## Building locally

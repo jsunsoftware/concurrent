@@ -49,7 +49,7 @@ public interface StripedLock extends ResourceLock {
      * @return StripedLock instance
      */
     static StripedLock of(StripedLockType type, int stripes, Duration defaultTimeout) {
-        Objects.requireNonNull(type, "parameter 'type' may not be null");
+        Objects.requireNonNull(type, "Parameter [type] must not be null");
 
         StripedLock result;
         switch (type) {

@@ -6,12 +6,14 @@ import com.jsunsoft.util.Executable;
 import java.time.Duration;
 import java.util.Collection;
 
+import static java.util.Objects.requireNonNull;
+
 public class DelegateResourceLock implements ResourceLock {
 
     private final ResourceLock delegate;
 
     public DelegateResourceLock(ResourceLock delegate) {
-        this.delegate = delegate;
+        this.delegate = requireNonNull(delegate, "Parameter [delegate] must not be null");
     }
 
     @Override

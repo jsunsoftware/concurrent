@@ -29,13 +29,20 @@ public class StripedLockFactory {
     /**
      * Creates and returns a ResourceLock according to the specified type.
      *
+     * <p>Note: this factory returns a striped lock implementation based on Guava {@code Striped}. It provides
+     * best-effort parallelism: different keys may map to the same stripe.</p>
+     *
      * @param type           type of striped lock
      * @param stripes        Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
      * @param defaultTimeout the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @return StripedLock instance
      */
     public static ResourceLock of(StripedLockType type, int stripes, Duration defaultTimeout) {
-        return StripedLock.of(type, stripes, defaultTimeout);
+        // Delegates to the legacy type for now to preserve binary compatibility.
+        // The legacy interface is deprecated but the underlying implementation is still used internally.
+        @SuppressWarnings("deprecation")
+        StripedLock lock = StripedLock.of(type, stripes, defaultTimeout);
+        return lock;
     }
 
     /**
