@@ -173,6 +173,13 @@ public abstract class AbstractResourceLock implements ResourceLock {
      *
      * <p>Note: this method intentionally catches {@link Exception} (not {@link Throwable}) and does not throw from the
      * {@code finally} block.</p>
+     *
+     * @param <R> return type produced by the callback
+     * @param <X> throwable type declared by the callback
+     * @param callback callback to execute while the lock is held
+     * @param unlockAction action that releases the lock(s)
+     * @return the value returned by {@code callback}
+     * @throws X if {@code callback} throws an exception of type {@code X}
      */
     protected final <R, X extends Throwable> R callWithUnlock(Closure<R, X> callback, Runnable unlockAction) throws X {
         Exception primaryException = null;
@@ -333,6 +340,8 @@ public abstract class AbstractResourceLock implements ResourceLock {
      * Logs that the given resource has been locked.
      *
      * <p>Non-public hook for subclasses to customize logging behavior.</p>
+     *
+     * @param resource the locked resource
      */
     protected void logLockedResource(Object resource) {
         LOGGER.debug("The resource: [{}] has been locked", resource);
@@ -342,6 +351,8 @@ public abstract class AbstractResourceLock implements ResourceLock {
      * Logs that the given resource has been unlocked.
      *
      * <p>Non-public hook for subclasses to customize logging behavior.</p>
+     *
+     * @param resource the unlocked resource
      */
     protected void logUnlockResource(Object resource) {
         LOGGER.debug("The resource: [{}] has been unlocked", resource);
@@ -358,6 +369,9 @@ public abstract class AbstractResourceLock implements ResourceLock {
     /**
      * Marks the current thread as interrupted and returns an {@link IllegalStateException} suitable for non-interruptible
      * API variants that do not declare {@link InterruptedException}.
+     *
+     * @param e the interrupt exception caught from an interruptible API
+     * @return an {@link IllegalStateException} wrapping {@code e} after re-interrupting the current thread
      */
     protected IllegalStateException interruptAndResolveException(InterruptedException e) {
         Thread.currentThread().interrupt();
@@ -368,6 +382,8 @@ public abstract class AbstractResourceLock implements ResourceLock {
      * Validates the timeout argument.
      *
      * <p>Timeouts must be non-null and non-negative.</p>
+     *
+     * @param timeout timeout duration to validate
      */
     protected void validateTimeout(Duration timeout) {
         Preconditions.checkNotNull(timeout, "Parameter [timeout] must not be null");
