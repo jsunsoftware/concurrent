@@ -39,6 +39,16 @@ import java.util.concurrent.TimeUnit;
  *   based on identity, not contents.</li>
  *   <li><b>Striped locks semantics</b>: implementations based on Guava {@code Striped} provide <i>striped</i> locking, not
  *   one-lock-per-key. Different keys may map to the same stripe, so parallelism is best-effort.</li>
+ *   <li><b>Reentrancy on same-stripe keys (same thread)</b>: the underlying locks are reentrant (Guava's
+ *   {@code Striped} uses {@link java.util.concurrent.locks.ReentrantLock}). Combined with the previous bullet's
+ *   "different keys may share a stripe" property, this means a single thread can <i>silently nest</i> lock calls
+ *   on two distinct keys that happen to hash to the same stripe &mdash; the inner {@code lock(...)} succeeds via
+ *   reentrancy rather than blocking. Multi-key calls like {@code lock(List.of("A","B"))} share the same property:
+ *   if both keys map to the same stripe, the same underlying lock is acquired (and released) twice. This is by
+ *   design and is what makes the library correct under collisions, but is worth being explicit about:
+ *   <i>different keys do not imply independent locks</i>. Callers that depend on mutual exclusion holding between
+ *   two specific distinct keys must either size the stripe count high enough to make collisions negligible, or
+ *   accept that collisions serialize.</li>
  *   <li><b>Multi-key deadlock avoidance</b>: the bundled implementations (Guava {@code Striped}-based and the
  *   {@code AbstractResourceLock} base class) sort the caller's collection into a deterministic order before
  *   acquiring, so two threads passing the same multiset of keys in different iteration orders (e.g., {@code [A,B]}
