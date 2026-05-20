@@ -23,10 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 
@@ -270,13 +267,21 @@ public abstract class AbstractResourceLock implements ResourceLock {
         Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
         validateTimeout(timeout);
 
-        List<Object> lockAcquiredResources = new ArrayList<>(resources.size());
+        // Sort by keyOrder() so two threads passing the same keys in different iteration orders
+        // (e.g., [A,B] and [B,A]) acquire in the SAME order — this is the classical
+        // AB/BA-deadlock prevention. Subclasses with backend-aware ordering (the Guava Striped
+        // implementation in this library) override this method directly and use their own
+        // ordering; this default path is for plain AbstractResourceLock subclasses.
+        List<Object> orderedResources = new ArrayList<>(resources);
+        orderedResources.sort(keyOrder());
+
+        List<Object> lockAcquiredResources = new ArrayList<>(orderedResources.size());
 
         Exception primaryException = null;
 
         try {
 
-            for (Object resource : resources) {
+            for (Object resource : orderedResources) {
                 lockInterruptibly(resource, timeout);
                 lockAcquiredResources.add(resource);
             }
@@ -387,5 +392,45 @@ public abstract class AbstractResourceLock implements ResourceLock {
     protected void validateTimeout(Duration timeout) {
         Preconditions.checkNotNull(timeout, "Parameter [timeout] must not be null");
         Preconditions.checkArgument(!timeout.isNegative(), "Parameter [timeout] must not be negative");
+    }
+
+    /**
+     * Returns the comparator used to acquire multi-key locks in a deterministic order.
+     *
+     * <p>This is the classical <i>AB/BA</i> deadlock prevention strategy: when two threads pass the
+     * same set of keys to the multi-key {@code lock(...)} family in different iteration orders, the
+     * implementation sorts both inputs by this comparator before acquiring, so both threads acquire
+     * in the same order and cannot deadlock against each other.</p>
+     *
+     * <p>The default sorts by {@link Object#hashCode()}. This is correct for any callers that
+     * respect the {@code ResourceLock} <b>Key stability</b> contract (consistent
+     * {@code hashCode}/{@code equals} across threads using the same keys). Hash collisions are
+     * rare in practice and do not create deadlocks &mdash; only the unrealistic case of <i>two
+     * value-distinct keys with the same {@code hashCode}, passed in opposite orders by two threads
+     * with the same arrival pattern</i> could see any ordering ambiguity, and even then the
+     * fallback iteration order keeps acquisition local to one thread at a time.</p>
+     *
+     * <p>Subclasses can override to provide backend-aware ordering, for example:</p>
+     * <ul>
+     *   <li>{@code Comparator.comparingInt(this::stripeIndexFor)} for a custom striped backend that
+     *   exposes a stripe index per key.</li>
+     *   <li>{@code Comparator.comparing(k -> ((Comparable<?>) k))} (with appropriate casts) for
+     *   subclasses that lock only {@link Comparable} keys.</li>
+     *   <li>{@code Comparator.<Object, String>comparing(o -> o.getClass().getName()).thenComparingInt(Object::hashCode)}
+     *   for subclasses that mix heterogeneous key types.</li>
+     * </ul>
+     *
+     * <p><b>Contract:</b> the returned comparator MUST be a total order and consistent across all
+     * threads that use the same keys. It does not need to handle {@code null} &mdash; the library
+     * validates non-null elements before invoking this comparator.</p>
+     *
+     * <p><b>Note:</b> the bundled Guava {@code Striped}-based subclass does not use this hook
+     * because it overrides {@link #lockInterruptibly(Collection, Duration)} directly and delegates
+     * ordering to {@code Striped.bulkGet(Iterable)}.</p>
+     *
+     * @return a comparator that imposes a total order on lock keys
+     */
+    protected Comparator<Object> keyOrder() {
+        return Comparator.comparingInt(Object::hashCode);
     }
 }

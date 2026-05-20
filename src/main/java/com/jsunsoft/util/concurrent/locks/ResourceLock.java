@@ -39,9 +39,14 @@ import java.util.concurrent.TimeUnit;
  *   based on identity, not contents.</li>
  *   <li><b>Striped locks semantics</b>: implementations based on Guava {@code Striped} provide <i>striped</i> locking, not
  *   one-lock-per-key. Different keys may map to the same stripe, so parallelism is best-effort.</li>
- *   <li><b>Multi-key deadlock avoidance</b>: if a {@code ResourceLock} implementation acquires multiple locks in the
- *   caller-provided iteration order, callers must provide the resources in a <i>consistent global order</i> across all
- *   threads to avoid deadlocks. The striped implementation provided by this library handles ordering internally.</li>
+ *   <li><b>Multi-key deadlock avoidance</b>: the bundled implementations (Guava {@code Striped}-based and the
+ *   {@code AbstractResourceLock} base class) sort the caller's collection into a deterministic order before
+ *   acquiring, so two threads passing the same multiset of keys in different iteration orders (e.g., {@code [A,B]}
+ *   and {@code [B,A]}) acquire in the same order and cannot deadlock against each other. The Guava-based
+ *   implementation uses {@code Striped.bulkGet(Iterable)} (stripe-index order); the base class uses a hashCode-based
+ *   comparator that subclasses can override via the protected {@code keyOrder()} hook. Custom implementations that
+ *   neither inherit from {@code AbstractResourceLock} nor sort internally must ensure callers provide keys in a
+ *   consistent global order.</li>
  *   <li><b>Timeout for collections</b>: collection-based methods apply the timeout <i>per lock acquisition</i>. Worst case
  *   waiting time can be {@code resources.size() × timeout}.</li>
  *   <li><b>Cross-thread acquisition (stripe-collision deadlock)</b>: never hold a {@code ResourceLock} while waiting
