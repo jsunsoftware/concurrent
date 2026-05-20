@@ -28,7 +28,15 @@ import java.util.concurrent.TimeUnit;
  * <p><b>Important notes</b></p>
  * <ul>
  *   <li><b>Key stability</b>: {@code resource} keys must have a stable {@link Object#hashCode()} / {@link Object#equals(Object)}
- *   while the lock is held. Using mutable objects (or arrays) as keys can lead to failed unlocks and leaked locks.</li>
+ *   while the lock is held. The library's unlock path resolves the underlying lock by key (effectively
+ *   {@code striped.get(key).unlock()}), so if the key's {@code hashCode} or {@code equals} changes between
+ *   {@code lock(key)} and {@code unlock(key)}, unlock will target a different stripe than the one acquired &mdash; the
+ *   unlock will fail with {@link IllegalMonitorStateException} and <b>the originally-acquired stripe will be leaked</b>
+ *   until process exit. The same hazard applies if the caller passes a logically-different collection to
+ *   {@code unlock(Collection)} than to {@code lock(Collection)}. Prefer immutable keys (e.g., {@code String},
+ *   {@code UUID}, value-typed objects, boxed primitives), or freeze the key's identifying fields before passing it to
+ *   any {@code lock(...)} method. Arrays must never be used as keys &mdash; their {@code hashCode}/{@code equals} are
+ *   based on identity, not contents.</li>
  *   <li><b>Striped locks semantics</b>: implementations based on Guava {@code Striped} provide <i>striped</i> locking, not
  *   one-lock-per-key. Different keys may map to the same stripe, so parallelism is best-effort.</li>
  *   <li><b>Multi-key deadlock avoidance</b>: if a {@code ResourceLock} implementation acquires multiple locks in the
@@ -36,6 +44,16 @@ import java.util.concurrent.TimeUnit;
  *   threads to avoid deadlocks. The striped implementation provided by this library handles ordering internally.</li>
  *   <li><b>Timeout for collections</b>: collection-based methods apply the timeout <i>per lock acquisition</i>. Worst case
  *   waiting time can be {@code resources.size() × timeout}.</li>
+ *   <li><b>Cross-thread acquisition (stripe-collision deadlock)</b>: never hold a {@code ResourceLock} while waiting
+ *   on another thread that may try to acquire any key on the same {@code ResourceLock} instance. Because striping is
+ *   best-effort (two seemingly distinct keys can map to the same underlying lock), this hazard is more common than
+ *   "different keys → no contention" intuition suggests. Concretely: if thread A holds {@code lock("X")} and waits
+ *   (e.g., via {@code future.get()}) for thread B which then calls {@code lock("Y")} where the two keys collide on
+ *   the same stripe, the two threads deadlock. {@code ReentrantLock} reentrancy does not help because B is a
+ *   different thread. <b>The {@code defaultTimeout} configured at construction is the safety net</b>: once it
+ *   expires on the waiter, {@link LockAcquireException} is thrown and the holder can unwind. Choose
+ *   {@code defaultTimeout} accordingly &mdash; pick a value that bounds incident-recovery time, and avoid
+ *   extremely large values (e.g., hours, days) that would turn this scenario into a true deadlock.</li>
  * </ul>
  */
 public interface ResourceLock {
@@ -304,12 +322,19 @@ public interface ResourceLock {
     /**
      * Locks the given collection of resources.
      *
+     * <p><b>Symmetry contract.</b> This is the manual counterpart of {@link #unlock(Collection)}. The caller is
+     * responsible for passing the same logical multiset of keys to {@code unlock(Collection)} when releasing &mdash;
+     * see {@link #unlock(Collection)} for the consequences of mismatched calls. For automatic acquire/release
+     * symmetry, prefer the lambda variants {@link #lock(Collection, Executable)} / {@link #lock(Collection, Closure)}.</p>
+     *
      * @param resources collection of resources to lock
      */
     void lock(Collection<?> resources);
 
     /**
      * Locks the given collection of resources for a specified time.
+     *
+     * <p><b>Symmetry contract.</b> See {@link #unlock(Collection)} for the matching-call requirement.</p>
      *
      * @param resources collection of resources to lock
      * @param timeout   the maximum time to wait for the lock
@@ -335,6 +360,8 @@ public interface ResourceLock {
 
     /**
      * Locks the given collection of resources interruptibly.
+     *
+     * <p><b>Symmetry contract.</b> See {@link #unlock(Collection)} for the matching-call requirement.</p>
      *
      * @param resources collection of resources to lock
      * @throws InterruptedException if the current thread is interrupted while acquiring the lock
@@ -362,7 +389,26 @@ public interface ResourceLock {
     /**
      * Unlocks the given collection of resources.
      *
-     * @param resources collection of resources to unlock
+     * <p><b>Symmetry contract</b>: this is the manual counterpart of {@link #lock(Collection)}. The implementation
+     * calls {@code unlock} for each element in {@code resources} (in reverse order in the bundled striped
+     * implementation); it does <b>not</b> infer what was acquired by a previous {@code lock(...)} call and it does
+     * <b>not</b> attempt to "fix up" mismatched arguments. Passing a different multiset of keys than was originally
+     * acquired produces exactly the behavior requested:</p>
+     *
+     * <ul>
+     *   <li>Elements present in {@code resources} but <b>not</b> currently held by the calling thread will throw
+     *   {@link IllegalMonitorStateException} (propagated by the underlying lock).</li>
+     *   <li>Elements that were acquired but are <b>not</b> in the {@code resources} passed to this method remain
+     *   <b>permanently held</b> until the calling thread either calls {@code unlock} on them explicitly or the JVM
+     *   exits. The library does not attempt to detect or recover from this caller bug.</li>
+     * </ul>
+     *
+     * <p>For callers who want automatic, exception-safe acquire/release with no chance of asymmetric calls, use the
+     * lambda variants {@link #lock(Collection, Executable)} or {@link #lock(Collection, Closure)} instead of the
+     * manual {@code lock(Collection)} / {@code unlock(Collection)} pair.</p>
+     *
+     * @param resources collection of resources to unlock; must match the multiset of keys previously passed to
+     *                  {@link #lock(Collection)} / {@link #lockInterruptibly(Collection)}
      */
     void unlock(Collection<?> resources);
 }
