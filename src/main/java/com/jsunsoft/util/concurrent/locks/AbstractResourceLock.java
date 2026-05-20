@@ -167,12 +167,9 @@ public abstract class AbstractResourceLock implements ResourceLock {
     /**
      * Executes the callback and always executes the provided unlock action.
      *
-     * <p>If the callback throws an {@link Exception} and unlock fails, the unlock exception is added as a suppressed
-     * exception to the primary exception. If the callback completes successfully and unlock fails, the unlock exception
+     * <p>If the callback throws (Exception or Error) and unlock fails, the unlock exception is added as a suppressed
+     * exception to the primary throwable. If the callback completes successfully and unlock fails, the unlock exception
      * is thrown.</p>
-     *
-     * <p>Note: this method intentionally catches {@link Exception} (not {@link Throwable}) and does not throw from the
-     * {@code finally} block.</p>
      *
      * @param <R> return type produced by the callback
      * @param <X> throwable type declared by the callback
@@ -182,15 +179,17 @@ public abstract class AbstractResourceLock implements ResourceLock {
      * @throws X if {@code callback} throws an exception of type {@code X}
      */
     protected final <R, X extends Throwable> R callWithUnlock(Closure<R, X> callback, Runnable unlockAction) throws X {
-        Exception primaryException = null;
+        Throwable primaryException = null;
         RuntimeException exceptionDuringUnlock = null;
 
         R result;
         try {
             result = callback.call();
-        } catch (Exception e) {
-            primaryException = e;
-            throw e;
+        } catch (Throwable t) {
+            // Mirrors try-with-resources: record so finally can addSuppressed, then rethrow immediately.
+            // We do NOT handle Errors — `throw t;` propagates them unchanged.
+            primaryException = t;
+            throw t;
         } finally {
             try {
                 unlockAction.run();
