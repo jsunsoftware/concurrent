@@ -328,6 +328,8 @@ public abstract class AbstractResourceLock implements ResourceLock {
                     LOGGER.error("Failed to unlock resource: {}", resource, e);
                     if (firstExceptionDuringUnlock == null) {
                         firstExceptionDuringUnlock = e;
+                    } else {
+                        firstExceptionDuringUnlock.addSuppressed(e);
                     }
                 }
             }
@@ -371,15 +373,21 @@ public abstract class AbstractResourceLock implements ResourceLock {
     }
 
     /**
-     * Marks the current thread as interrupted and returns an {@link IllegalStateException} suitable for non-interruptible
-     * API variants that do not declare {@link InterruptedException}.
+     * Re-sets the current thread's interrupted flag and returns a {@link LockInterruptedException} suitable for
+     * non-interruptible API variants that do not declare {@link InterruptedException}.
+     *
+     * <p>The returned exception is a {@link RuntimeException} so callers do not need to declare it; catch it
+     * separately from {@link LockAcquireException} to distinguish a shutdown signal (interrupt) from a timeout.</p>
      *
      * @param e the interrupt exception caught from an interruptible API
-     * @return an {@link IllegalStateException} wrapping {@code e} after re-interrupting the current thread
+     * @return a {@link LockInterruptedException} wrapping {@code e}, after re-interrupting the current thread
      */
-    protected IllegalStateException interruptAndResolveException(InterruptedException e) {
+    protected LockInterruptedException interruptAndResolveException(InterruptedException e) {
         Thread.currentThread().interrupt();
-        return new IllegalStateException("thread was interrupted. Threads which use the lock  method  mustn't be interrupted.", e);
+        return new LockInterruptedException(
+                "Thread was interrupted while waiting to acquire the lock. " +
+                        "Use the lockInterruptibly(...) variants if interruption is expected.",
+                e);
     }
 
     /**

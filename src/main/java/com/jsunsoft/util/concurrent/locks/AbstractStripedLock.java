@@ -240,6 +240,8 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
                 LOGGER.error("Failed to unlock resources: {}", resources, e);
                 if (firstExceptionDuringUnlock == null) {
                     firstExceptionDuringUnlock = e;
+                } else {
+                    firstExceptionDuringUnlock.addSuppressed(e);
                 }
             }
         }

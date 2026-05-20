@@ -71,7 +71,7 @@ public interface ResourceLock {
      *                   The execute method will be called in synchronized block
      * @param <X>        Custom exception type which can be thrown from method execute.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      * @see #lock(Object, Duration, Executable)
@@ -88,7 +88,7 @@ public interface ResourceLock {
      * @param <X>      Custom exception type which can be thrown from method execute.
      * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Object, Closure)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
@@ -101,7 +101,7 @@ public interface ResourceLock {
      *                   The execute method will be called in synchronized block
      * @param <X>        Custom exception type which can be thrown from method execute.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
@@ -116,7 +116,7 @@ public interface ResourceLock {
      * @param <X>      Custom exception type which can be thrown from method execute.
      * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Object, Closure)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
@@ -130,7 +130,7 @@ public interface ResourceLock {
      *                   The execute method will be called in synchronized block
      * @param <X>        Custom exception type which can be thrown from method execute.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      * @see #lock(Collection, Duration, Executable)
@@ -147,7 +147,7 @@ public interface ResourceLock {
      * @param <X>       Custom exception type which can be thrown from method execute.
      * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Collection, Closure)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
@@ -161,7 +161,7 @@ public interface ResourceLock {
      *                   The execute method will be called in synchronized block
      * @param <X>        Custom exception type which can be thrown from method execute.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
@@ -177,7 +177,7 @@ public interface ResourceLock {
      * @param <X>       Custom exception type which can be thrown from method execute.
      * @return The result of the callback execution.
      * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws IllegalStateException If thread was interrupted.
+     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
      *                               Use the method {@link #lockInterruptibly(Collection, Closure)} if thread can be interrupted.
      * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
      */
