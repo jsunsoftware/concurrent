@@ -17,6 +17,7 @@ package com.jsunsoft.util.concurrent.locks;
  */
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -24,6 +25,10 @@ import java.util.Collections;
  * Thrown when a {@link ResourceLock} cannot be acquired within the specified timeout.
  *
  * <p>The exception carries the requested {@link #getTimeout()} and the {@link #getResources()} involved.</p>
+ *
+ * <p>{@link #getResources()} returns an <b>immutable</b> snapshot of the keys whose acquisition failed.
+ * For single-key throw sites the snapshot has one element; for multi-key throw sites the snapshot
+ * contains each individual key (a defensive copy of the caller's collection).</p>
  */
 public class LockAcquireException extends RuntimeException {
 
@@ -33,15 +38,41 @@ public class LockAcquireException extends RuntimeException {
     private final Duration timeout;
 
     LockAcquireException(String message, Object resource, Duration timeout) {
-        this(message, resource == null ? Collections.emptyList() : Collections.singleton(resource), timeout);
-    }
-
-    LockAcquireException(String message, Collection<Object> resources, Duration timeout) {
         super(message);
-        this.resources = resources;
+        this.resources = (resource == null) ? Collections.emptyList() : Collections.singleton(resource);
         this.timeout = timeout;
     }
 
+    /**
+     * Multi-key constructor.
+     *
+     * <p>The parameter type is {@code Collection<?>} (not {@code Collection<Object>}) so that callers passing
+     * {@code Collection<?>} reach this overload by ordinary Java method-resolution rules. With
+     * {@code Collection<Object>}, generic invariance would silently divert the call to the
+     * single-{@link Object} overload and wrap the entire input collection in a {@code Collections.singleton(...)},
+     * losing the individual keys.</p>
+     *
+     * <p>The input is defensively copied and wrapped as unmodifiable so the exception cannot be tampered with after
+     * construction.</p>
+     */
+    LockAcquireException(String message, Collection<?> resources, Duration timeout) {
+        super(message);
+        this.resources = (resources == null || resources.isEmpty())
+                ? Collections.emptyList()
+                : Collections.unmodifiableCollection(new ArrayList<>(resources));
+        this.timeout = timeout;
+    }
+
+    /**
+     * Returns an immutable snapshot of the resources whose acquisition failed.
+     *
+     * <p>For single-key failures the returned collection has size 1. For multi-key failures it contains the
+     * individual keys (the caller's collection is defensively copied at construction).</p>
+     *
+     * <p>Note: the underlying field is {@code transient}, so {@code getResources()} returns {@code null}
+     * after deserialisation. A future fix will pre-format and persist the textual form; see the project's
+     * deferred-issue list for details.</p>
+     */
     public Collection<Object> getResources() {
         return resources;
     }
