@@ -152,7 +152,6 @@ public abstract class AbstractResourceLock implements ResourceLock {
     public <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws InterruptedException, X {
         requireNonNull(resources, "Parameter [resources] must not be null");
         requireNonNull(callback, "Parameter [callback] must not be null");
-        Preconditions.checkArgument(resources.stream().allMatch(Objects::nonNull), "Parameter [resources] must not contain null elements");
         validateTimeout(timeout);
 
         lockInterruptibly(resources, timeout);
@@ -285,7 +284,7 @@ public abstract class AbstractResourceLock implements ResourceLock {
                 lockInterruptibly(resource, timeout);
                 lockAcquiredResources.add(resource);
             }
-        } catch (Exception e) {
+        } catch (InterruptedException | RuntimeException e) {
 
             primaryException = e;
 

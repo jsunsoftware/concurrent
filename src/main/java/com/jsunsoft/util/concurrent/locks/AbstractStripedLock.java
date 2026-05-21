@@ -90,7 +90,7 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
 
             LOGGER.trace("The resources: {} have been locked", resources);
 
-        } catch (Exception e) {
+        } catch (InterruptedException | RuntimeException e) {
             primaryException = e;
 
             throw e;
