@@ -47,7 +47,9 @@ public interface StripedLock extends ResourceLock {
      * @param stripes        Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
      * @param defaultTimeout the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
      * @return StripedLock instance
+     * @deprecated use {@link #of(int, Duration)} instead.
      */
+    @Deprecated
     static StripedLock of(StripedLockType type, int stripes, Duration defaultTimeout) {
         Objects.requireNonNull(type, "Parameter [type] must not be null");
 

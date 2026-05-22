@@ -16,11 +16,19 @@ package com.jsunsoft.util.concurrent.locks.striped;
  */
 
 import com.jsunsoft.util.concurrent.locks.ResourceLock;
-import com.jsunsoft.util.concurrent.locks.StripedLock;
+// NOTE: the (deprecated) com.jsunsoft.util.concurrent.locks.StripedLock interface is NOT imported.
+// Javac issues a deprecation warning at the import token regardless of @SuppressWarnings on the
+// class (the annotation does not cover declarations outside the type). Using the fully-qualified
+// name inside the method body keeps the warning suppression effective via the class-level
+// @SuppressWarnings("deprecation") below.
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+// Class-level @SuppressWarnings("deprecation") covers the fully-qualified reference to the
+// (now deprecated) StripedLock interface in of(...). The legacy interface is still used
+// internally to preserve binary compatibility; the factory's public surface is unchanged.
+@SuppressWarnings("deprecation")
 public class StripedLockFactory {
 
     private StripedLockFactory() {
@@ -35,14 +43,12 @@ public class StripedLockFactory {
      * @param type           type of striped lock
      * @param stripes        Minimum number of stripes. See the documentation {@link com.google.common.util.concurrent.Striped}
      * @param defaultTimeout the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @return StripedLock instance
+     * @return ResourceLock instance
      */
     public static ResourceLock of(StripedLockType type, int stripes, Duration defaultTimeout) {
         // Delegates to the legacy type for now to preserve binary compatibility.
         // The legacy interface is deprecated but the underlying implementation is still used internally.
-        @SuppressWarnings("deprecation")
-        StripedLock lock = StripedLock.of(type, stripes, defaultTimeout);
-        return lock;
+        return com.jsunsoft.util.concurrent.locks.StripedLock.of(type, stripes, defaultTimeout);
     }
 
     /**

@@ -40,6 +40,8 @@ import static java.util.Objects.requireNonNull;
  *
  * <p>For callers that explicitly want to handle interrupts, prefer the {@code lockInterruptibly(...)} variants —
  * those throw checked {@link InterruptedException} directly and never wrap it in this runtime exception.</p>
+ *
+ * @since 2.2.0
  */
 public class LockInterruptedException extends RuntimeException {
 

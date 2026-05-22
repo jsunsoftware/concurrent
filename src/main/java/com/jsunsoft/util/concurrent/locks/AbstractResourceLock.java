@@ -436,6 +436,7 @@ public abstract class AbstractResourceLock implements ResourceLock {
      * ordering to {@code Striped.bulkGet(Iterable)}.</p>
      *
      * @return a comparator that imposes a total order on lock keys
+     * @since 2.2.0
      */
     protected Comparator<Object> keyOrder() {
         return Comparator.comparingInt(Object::hashCode);

@@ -15,6 +15,7 @@ package com.jsunsoft.util.concurrent.locks;
  * limitations under the License.
  */
 
+import com.google.errorprone.annotations.ThreadSafe;
 import com.jsunsoft.util.Closure;
 import com.jsunsoft.util.Executable;
 
@@ -71,251 +72,196 @@ import java.util.concurrent.TimeUnit;
  *   extremely large values (e.g., hours, days) that would turn this scenario into a true deadlock.</li>
  * </ul>
  */
+@ThreadSafe
 public interface ResourceLock {
 
     /**
-     * Uses the default {@code timeout}.
+     * Void-returning variant of {@link #lock(Object, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resource   resource to lock
-     * @param executable Mainly lambda expression which execution will be synchronized by resource.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
-     * @see #lock(Object, Duration, Executable)
+     * @see #lock(Object, Duration, Closure)
      */
     <X extends Throwable> void lock(Object resource, Executable<X> executable) throws X;
 
     /**
-     * Uses the default {@code timeout}.
+     * Variant of {@link #lock(Object, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resource resource to lock
-     * @param callback Callback which execution will be synchronized by resource.
-     *                 The execute method will be called in synchronized block
-     * @param <R>      Return type of the callback.
-     * @param <X>      Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Object, Closure)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lock(Object, Duration, Closure)
      */
     <R, X extends Throwable> R lock(Object resource, Closure<R, X> callback) throws X;
 
     /**
-     * @param resource   resource to lock
-     * @param timeout    the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param executable Mainly lambda expression which execution will be synchronized by resource.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Object, Executable)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
+     * Void-returning variant of {@link #lock(Object, Duration, Closure)}.
+     *
+     * @see #lock(Object, Duration, Closure)
      */
     <X extends Throwable> void lock(Object resource, Duration timeout, Executable<X> executable) throws X;
 
     /**
-     * @param resource resource to lock
-     * @param timeout  the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param callback Callback which execution will be synchronized by resource.
-     *                 The execute method will be called in synchronized block
-     * @param <R>      Return type of the callback.
-     * @param <X>      Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Object, Closure)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
+     * Acquires the lock for {@code resource}, runs {@code callback}, and releases the lock &mdash; reliably,
+     * even if {@code callback} or the release itself throws. This is the canonical single-key lambda variant
+     * of the {@code lock(...)} family; all the shorter overloads delegate here.
+     *
+     * <p>Acquisition behaviour:</p>
+     * <ul>
+     *   <li>If the lock cannot be acquired within {@code timeout}, throws {@link LockAcquireException}.</li>
+     *   <li>If the calling thread is interrupted while waiting, throws {@link LockInterruptedException}
+     *   (this method is the non-interruptible variant &mdash; use {@link #lockInterruptibly(Object, Duration, Closure)}
+     *   if your caller wants to handle interrupts via checked {@link InterruptedException}).</li>
+     *   <li>If acquisition succeeds, {@code callback.call()} runs while the lock is held. Any throwable propagates;
+     *   the unlock attempt happens in a finally block, and an unlock failure is attached as a suppressed exception
+     *   on the primary throwable (mirroring try-with-resources).</li>
+     * </ul>
+     *
+     * @param resource the key to lock on; must have stable {@link Object#hashCode()} / {@link Object#equals(Object)}
+     *                 between this call and the corresponding unlock (see the "Key stability" bullet on the
+     *                 {@code ResourceLock} class Javadoc)
+     * @param timeout  maximum time to wait for the lock &mdash; see
+     *                 {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
+     * @param callback code to run while the lock is held; receives no arguments, may return any value, may
+     *                 throw any checked exception type {@code X}
+     * @param <R>      return type of {@code callback}
+     * @param <X>      checked exception type that {@code callback} may throw
+     * @return whatever {@code callback} returns
+     * @throws X                          if {@code callback} throws
+     * @throws LockAcquireException       if the lock cannot be acquired within {@code timeout}
+     * @throws LockInterruptedException   if the current thread is interrupted while waiting
      */
     <R, X extends Throwable> R lock(Object resource, Duration timeout, Closure<R, X> callback) throws X;
 
     /**
-     * Uses the default {@code timeout}.
+     * Void-returning variant of {@link #lock(Collection, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resources  collection of resources to lock
-     * @param executable Mainly lambda expression which execution will be synchronized by resources.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
-     * @see #lock(Collection, Duration, Executable)
+     * @see #lock(Collection, Duration, Closure)
      */
     <X extends Throwable> void lock(Collection<?> resources, Executable<X> executable) throws X;
 
     /**
-     * Uses the default {@code timeout}.
+     * Variant of {@link #lock(Collection, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resources collection of resources to lock
-     * @param callback  Callback which execution will be synchronized by resources.
-     *                  The execute method will be called in synchronized block
-     * @param <R>       Return type of the callback.
-     * @param <X>       Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Collection, Closure)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lock(Collection, Duration, Closure)
      */
     <R, X extends Throwable> R lock(Collection<?> resources, Closure<R, X> callback) throws X;
 
     /**
-     * @param resources  collection of resources to lock
-     * @param timeout    the maximum time to wait for <b>each</b> lock. Worst case total wait is {@code resources.size() × timeout}.
-     *                   See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param executable Mainly lambda expression which execution will be synchronized by resources.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Collection, Executable)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
+     * Void-returning variant of {@link #lock(Collection, Duration, Closure)}.
+     *
+     * @see #lock(Collection, Duration, Closure)
      */
     <X extends Throwable> void lock(Collection<?> resources, Duration timeout, Executable<X> executable) throws X;
 
     /**
-     * @param resources collection of resources to lock
-     * @param timeout   the maximum time to wait for <b>each</b> lock. Worst case total wait is {@code resources.size() × timeout}.
-     *                  See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param callback  Callback which execution will be synchronized by resources.
-     *                  The execute method will be called in synchronized block
-     * @param <R>       Return type of the callback.
-     * @param <X>       Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws X                     Custom exception which can be thrown from method execute.
-     * @throws LockInterruptedException If the thread was interrupted while waiting to acquire the lock.
-     *                               Use the method {@link #lockInterruptibly(Collection, Closure)} if thread can be interrupted.
-     * @throws LockAcquireException   if unable to acquire lock when the maximum time to wait for the lock is expired
+     * Acquires all {@code resources} in a deterministic global order, runs {@code callback}, and releases the locks
+     * in reverse order &mdash; reliably, even if any step throws. This is the canonical multi-key lambda variant
+     * of the {@code lock(...)} family; all the shorter overloads delegate here.
+     *
+     * <p>Acquisition behaviour:</p>
+     * <ul>
+     *   <li>The {@code timeout} is applied <b>per stripe</b>, not as a total budget. Worst-case wait time is
+     *   {@code resources.size() × timeout}.</li>
+     *   <li>The bundled implementations sort {@code resources} into a deterministic order before locking, so two
+     *   threads passing the same multiset of keys in different iteration orders cannot AB/BA-deadlock against each
+     *   other &mdash; see the "Multi-key deadlock avoidance" bullet on the {@code ResourceLock} class Javadoc.</li>
+     *   <li>If any lock cannot be acquired within its {@code timeout}, already-acquired stripes are released and
+     *   {@link LockAcquireException} is thrown.</li>
+     *   <li>If the calling thread is interrupted while waiting, throws {@link LockInterruptedException}.</li>
+     *   <li>If acquisition fully succeeds, {@code callback.call()} runs while the locks are held. Any throwable
+     *   propagates; release happens in a finally block; release failures are attached as suppressed exceptions on
+     *   the primary throwable.</li>
+     * </ul>
+     *
+     * @param resources the keys to lock; the collection may not contain {@code null} elements (rejected
+     *                  with {@link IllegalArgumentException})
+     * @param timeout   per-stripe acquisition timeout
+     * @param callback  code to run while all locks are held
+     * @param <R>       return type of {@code callback}
+     * @param <X>       checked exception type that {@code callback} may throw
+     * @return whatever {@code callback} returns
+     * @throws X                          if {@code callback} throws
+     * @throws LockAcquireException       if any lock cannot be acquired within its per-stripe {@code timeout}
+     * @throws LockInterruptedException   if the current thread is interrupted while waiting
      */
     <R, X extends Throwable> R lock(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws X;
 
     /**
-     * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted.
-     * Uses the default {@code timeout}.
+     * Void-returning variant of {@link #lockInterruptibly(Object, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resource   resource to lock
-     * @param executable Mainly lambda expression which execution will be synchronized by resource.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
-     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
-     * @see #lockInterruptibly(Collection, Duration, Executable)
+     * @see #lockInterruptibly(Object, Duration, Closure)
      */
     <X extends Throwable> void lockInterruptibly(Object resource, Executable<X> executable) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Object, Closure)} that this method throws InterruptedException when thread is interrupted.
-     * Uses the default {@code timeout}.
+     * Variant of {@link #lockInterruptibly(Object, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resource resource to lock
-     * @param callback Callback which execution will be synchronized by resource.
-     *                 The execute method will be called in synchronized block
-     * @param <R>      Return type of the callback.
-     * @param <X>      Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
-     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lockInterruptibly(Object, Duration, Closure)
      */
     <R, X extends Throwable> R lockInterruptibly(Object resource, Closure<R, X> callback) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Object, Executable)} that this method throws InterruptedException when thread is interrupted.
+     * Void-returning variant of {@link #lockInterruptibly(Object, Duration, Closure)}.
      *
-     * @param resource   resource to lock
-     * @param timeout    the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param executable Mainly lambda expression which execution will be synchronized by resource.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
-     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lockInterruptibly(Object, Duration, Closure)
      */
     <X extends Throwable> void lockInterruptibly(Object resource, Duration timeout, Executable<X> executable) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Object, Closure)} that this method throws InterruptedException when thread is interrupted.
+     * Interruptible counterpart of {@link #lock(Object, Duration, Closure)}: if the calling thread is interrupted
+     * while waiting to acquire {@code resource}, this method throws checked {@link InterruptedException}
+     * (the non-interruptible {@code lock(...)} family throws {@link LockInterruptedException} instead).
      *
-     * @param resource resource to lock
-     * @param timeout  the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param callback Callback which execution will be synchronized by resource.
-     *                 The execute method will be called in synchronized block
-     * @param <R>      Return type of the callback.
-     * @param <X>      Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
-     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     * <p>Otherwise behaves identically to {@link #lock(Object, Duration, Closure)} &mdash; see that method for
+     * the rest of the contract (timeout, callback execution, suppressed-exception handling).</p>
+     *
+     * @param resource the key to lock on
+     * @param timeout  maximum time to wait for the lock
+     * @param callback code to run while the lock is held
+     * @param <R>      return type of {@code callback}
+     * @param <X>      checked exception type that {@code callback} may throw
+     * @return whatever {@code callback} returns
+     * @throws InterruptedException if the calling thread is interrupted while waiting
+     * @throws X                    if {@code callback} throws
+     * @throws LockAcquireException if the lock cannot be acquired within {@code timeout}
      */
     <R, X extends Throwable> R lockInterruptibly(Object resource, Duration timeout, Closure<R, X> callback) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted.
-     * Uses the default {@code timeout}.
+     * Void-returning variant of {@link #lockInterruptibly(Collection, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resources  collection of resources to lock
-     * @param executable Mainly lambda expression which execution will be synchronized by resource.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
-     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
-     * @see #lockInterruptibly(Collection, Duration, Executable)
+     * @see #lockInterruptibly(Collection, Duration, Closure)
      */
     <X extends Throwable> void lockInterruptibly(Collection<?> resources, Executable<X> executable) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Collection, Closure)} that this method throws InterruptedException when thread is interrupted.
-     * Uses the default {@code timeout} as maximum time to wait for each resource lock. Worst case is (n × timeout) See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}.
+     * Variant of {@link #lockInterruptibly(Collection, Duration, Closure)} that uses the configured default timeout.
      *
-     * @param resources collection of resources to lock
-     * @param callback  Callback which execution will be synchronized by resources.
-     *                  The execute method will be called in synchronized block
-     * @param <R>       Return type of the callback.
-     * @param <X>       Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     *                              (and interruption of lock acquisition is supported)
-     * @throws X                    Custom exception which can be thrown from method execute.
-     * @throws LockAcquireException Unable to acquire lock when the maximum time to wait for the lock is expired
+     * @see #lockInterruptibly(Collection, Duration, Closure)
      */
     <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Closure<R, X> callback) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Collection, Executable)} that this method throws InterruptedException when thread is interrupted.
+     * Void-returning variant of {@link #lockInterruptibly(Collection, Duration, Closure)}.
      *
-     * @param resources  collection of resources to lock
-     * @param timeout    the maximum time to wait for the lock. See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param executable Mainly lambda expression which execution will be synchronized by resources.
-     *                   The execute method will be called in synchronized block
-     * @param <X>        Custom exception type which can be thrown from method execute.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     * @throws X                    Custom exception which can be thrown from method execute.
+     * @see #lockInterruptibly(Collection, Duration, Closure)
      */
     <X extends Throwable> void lockInterruptibly(Collection<?> resources, Duration timeout, Executable<X> executable) throws InterruptedException, X;
 
     /**
-     * Difference between the {@link #lock(Collection, Closure)} that this method throws InterruptedException when thread is interrupted.
+     * Interruptible counterpart of {@link #lock(Collection, Duration, Closure)}: if the calling thread is interrupted
+     * while waiting to acquire any of {@code resources}, this method throws checked {@link InterruptedException}
+     * (the non-interruptible {@code lock(...)} family throws {@link LockInterruptedException} instead).
      *
-     * @param resources collection of resources to lock
-     * @param timeout   the maximum time to wait for each resource lock. Worst case is (n × timeout) See {@link java.util.concurrent.locks.Lock#tryLock(long, TimeUnit)}
-     * @param callback  Callback which execution will be synchronized by resources.
-     *                  The execute method will be called in synchronized block
-     * @param <R>       Return type of the callback.
-     * @param <X>       Custom exception type which can be thrown from method execute.
-     * @return The result of the callback execution.
-     * @throws InterruptedException if the current thread is interrupted while acquiring the lock
-     * @throws X                    Custom exception which can be thrown from method execute.
+     * <p>Otherwise behaves identically to {@link #lock(Collection, Duration, Closure)} &mdash; multi-key sorted
+     * acquisition, per-stripe timeout, partial-acquisition rollback, callback execution, suppressed-exception
+     * handling.</p>
+     *
+     * @param resources the keys to lock; the collection may not contain {@code null} elements
+     * @param timeout   per-stripe acquisition timeout
+     * @param callback  code to run while all locks are held
+     * @param <R>       return type of {@code callback}
+     * @param <X>       checked exception type that {@code callback} may throw
+     * @return whatever {@code callback} returns
+     * @throws InterruptedException if the calling thread is interrupted while waiting
+     * @throws X                    if {@code callback} throws
+     * @throws LockAcquireException if any lock cannot be acquired within its per-stripe {@code timeout}
      */
     <R, X extends Throwable> R lockInterruptibly(Collection<?> resources, Duration timeout, Closure<R, X> callback) throws InterruptedException, X;
 

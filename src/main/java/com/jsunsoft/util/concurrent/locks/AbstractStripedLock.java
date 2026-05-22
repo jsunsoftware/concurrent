@@ -52,11 +52,7 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
 
     protected AbstractStripedLock(Duration defaultTimeout, Striped<Lock> striped) {
         super(defaultTimeout);
-
-        requireNonNull(striped, "Parameter [striped] must not be null");
-        validateTimeout(defaultTimeout);
-
-        this.striped = striped;
+        this.striped = requireNonNull(striped, "Parameter [striped] must not be null");
     }
 
     /**
@@ -246,7 +242,16 @@ abstract class AbstractStripedLock extends AbstractResourceLock implements Strip
             }
         }
 
-        LOGGER.debug("The resources: {} have been unlocked.", resources);
+        if (firstExceptionDuringUnlock == null) {
+            // Emit per-resource debug logs only on full success — matches the single-key unlock(Object) path
+            // and avoids falsely logging "unlocked" for resources whose stripe failed to release.
+            for (Object resource : resources) {
+                logUnlockResource(resource);
+            }
+            LOGGER.debug("The resources: {} have been unlocked.", resources);
+        } else {
+            LOGGER.debug("The resources: {} have been partially unlocked; see ERROR log entries for the failure(s).", resources);
+        }
 
         return firstExceptionDuringUnlock;
     }

@@ -151,27 +151,6 @@ All `lock*` methods also have overloads returning a value via a callback, and ov
   lock acquisition.
   Worst-case wait time can be `N × timeout`.
 
-## Choosing striped lock type
-
-You can choose between eager and lazy-weak stripes via `StripedLockType`:
-
-```java
-import com.jsunsoft.util.concurrent.locks.ResourceLock;
-import com.jsunsoft.util.concurrent.locks.striped.StripedLockFactory;
-import com.jsunsoft.util.concurrent.locks.striped.StripedLockType;
-
-import java.time.Duration;
-
-public class Example {
-  public static void main(String[] args) {
-    ResourceLock lock = StripedLockFactory.of(StripedLockType.LAZY_WEAK_LOCK, 8, Duration.ofSeconds(30));
-  }
-}
-```
-
-See Javadoc for the difference between `LOCK` and `LAZY_WEAK_LOCK` (mirrors Guava’s `Striped.lock` vs
-`Striped.lazyWeakLock`).
-
 ## API overview
 
 `ResourceLock` exposes the following groups of methods (simplified):
