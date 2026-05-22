@@ -70,8 +70,10 @@ public class LockAcquireException extends RuntimeException {
      * individual keys (the caller's collection is defensively copied at construction).</p>
      *
      * <p>Note: the underlying field is {@code transient}, so {@code getResources()} returns {@code null}
-     * after deserialisation. A future fix will pre-format and persist the textual form; see the project's
-     * deferred-issue list for details.</p>
+     * after deserialisation.</p>
+     *
+     * @return an immutable collection of the resource keys whose acquisition failed; never {@code null}
+     *         except on a deserialised instance (where the underlying field is {@code transient})
      */
     public Collection<Object> getResources() {
         return resources;

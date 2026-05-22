@@ -131,6 +131,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.12.0</version>
+                <configuration>
+                    <!-- Run doclint with the "missing" category disabled.
+                         The 12 non-canonical lambda overloads on ResourceLock intentionally carry only a
+                         {@link}-pointer to the canonical 4-arg variant (single source of truth for the
+                         long-form contract). Default doclint emits "no @param/@throws/@return" for each
+                         of those, which is exactly the noise the dedup was meant to remove. All other
+                         doclint checks (broken HTML, bad references, malformed tags) remain active. -->
+                    <doclint>all,-missing</doclint>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
