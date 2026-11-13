@@ -37,24 +37,13 @@
     </developers>
 
     <properties>
-        <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+        <maven-deploy-plugin.version>3.2.0</maven-deploy-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.14.4</junit.version>
-        <guava.version>33.6.0-jre</guava.version>
-        <slf4j.version>2.0.18</slf4j.version>
+        <guava.version>33.8.0-jre</guava.version>
+        <slf4j.version>2.0.20</slf4j.version>
         <jmh.version>1.37</jmh.version>
     </properties>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
 
     <build>
         <plugins>
@@ -68,10 +57,14 @@
                 </configuration>
             </plugin>
 
+            <!-- Intentionally no <distributionManagement>: releases are uploaded through the Central Portal
+                 API, and -SNAPSHOT deploys fall back to https://central.sonatype.com/repository/maven-snapshots/
+                 with the `central` server credentials. A <distributionManagement> block would take precedence
+                 over that fallback and redirect snapshot deploys. -->
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.9.0</version>
+                <version>0.12.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <publishingServerId>central</publishingServerId>
@@ -82,7 +75,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
+                <version>3.16.0</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -107,7 +100,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.5</version>
+                <version>3.6.1</version>
                 <configuration>
                     <excludedGroups>benchmark</excludedGroups>
                 </configuration>
@@ -139,6 +132,9 @@
                          of those, which is exactly the noise the dedup was meant to remove. All other
                          doclint checks (broken HTML, bad references, malformed tags) remain active. -->
                     <doclint>all,-missing</doclint>
+                    <!-- Static footer: the default one prints {currentYear} taken from project.build.outputTimestamp,
+                         which Maven 3.10+ defaults to 1980-02-01 for reproducible builds. -->
+                    <bottom><![CDATA[Copyright &#169; jsunsoftware. Licensed under the Apache License, Version 2.0.]]></bottom>
                 </configuration>
                 <executions>
                     <execution>
